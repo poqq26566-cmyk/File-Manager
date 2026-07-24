@@ -6,6 +6,7 @@ import android.widget.RelativeLayout
 import androidx.core.view.ScrollingView
 import com.goodwy.commons.extensions.*
 import com.goodwy.commons.helpers.VIEW_TYPE_LIST
+import com.goodwy.commons.helpers.ensureBackgroundThread
 import com.goodwy.commons.models.FileDirItem
 import com.goodwy.commons.views.MyFloatingActionButton
 import com.goodwy.commons.views.MyRecyclerView
@@ -18,6 +19,7 @@ import com.goodwy.filemanager.databinding.StorageFragmentBinding
 import com.goodwy.filemanager.extensions.isPathOnRoot
 import com.goodwy.filemanager.extensions.tryOpenPathIntent
 import com.goodwy.filemanager.helpers.RootHelpers
+import com.goodwy.filemanager.helpers.TrashManager
 
 abstract class MyViewPagerFragment<BINDING : MyViewPagerFragment.InnerBinding>(context: Context, attributeSet: AttributeSet) :
     RelativeLayout(context, attributeSet) {
@@ -67,10 +69,18 @@ abstract class MyViewPagerFragment<BINDING : MyViewPagerFragment.InnerBinding>(c
         if (context!!.isPathOnRoot(firstPath)) {
             RootHelpers(activity!!).deleteFiles(files)
         } else {
-            (activity as SimpleActivity).deleteFiles(files, hasFolder) {
-                if (!it) {
-                    activity!!.runOnUiThread {
-                        activity!!.toast(R.string.unknown_error_occurred)
+            val ctx = context!!
+            // Copy into the recycle bin first (off the main thread, since it involves real file
+            // I/O), then run the normal delete flow which already handles permission prompts.
+            ensureBackgroundThread {
+                files.forEach { TrashManager.moveToTrash(ctx, it) }
+                activity?.runOnUiThread {
+                    (activity as SimpleActivity).deleteFiles(files, hasFolder) {
+                        if (!it) {
+                            activity!!.runOnUiThread {
+                                activity!!.toast(R.string.unknown_error_occurred)
+                            }
+                        }
                     }
                 }
             }
@@ -115,4 +125,4 @@ abstract class MyViewPagerFragment<BINDING : MyViewPagerFragment.InnerBinding>(c
     class StorageInnerBinding(val binding: StorageFragmentBinding) : InnerBinding {
         override val itemsFab: MyFloatingActionButton? = null
     }
-}
+    }

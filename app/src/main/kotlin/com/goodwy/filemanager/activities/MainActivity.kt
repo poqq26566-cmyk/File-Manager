@@ -119,7 +119,25 @@ class MainActivity : SimpleActivity() {
         if (filesTabIndex != -1) {
             binding.mainViewPager.currentItem = filesTabIndex
         }
-        openPath(pathToOpen, forceRefresh = true)
+
+        // The ViewPager hasn't laid out yet at this point in onCreate, so the Files fragment
+        // doesn't exist as a real object yet — getItemsFragment() would just return null and
+        // openPath() would silently no-op, leaving the tab blank forever. Wait for a layout pass
+        // (retrying a few times since fragment attachment can take more than one frame) before
+        // actually opening the path.
+        var attemptsLeft = 20
+        val tryOpen = object : Runnable {
+            override fun run() {
+                val fragment = getItemsFragment()
+                if (fragment != null) {
+                    openPath(pathToOpen, forceRefresh = true)
+                } else if (attemptsLeft > 0) {
+                    attemptsLeft--
+                    binding.mainViewPager.postDelayed(this, 25L)
+                }
+            }
+        }
+        binding.mainViewPager.post(tryOpen)
     }
 
     override fun onNewIntent(intent: Intent) {

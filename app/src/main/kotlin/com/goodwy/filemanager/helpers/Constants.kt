@@ -9,6 +9,7 @@ import com.goodwy.filemanager.R
 import com.goodwy.filemanager.models.ListItem
 
 const val MAX_COLUMN_COUNT = 15
+const val EXTRA_OPEN_PATH = "extra_open_path"
 
 // shared preferences
 const val SHOW_HIDDEN = "show_hidden"

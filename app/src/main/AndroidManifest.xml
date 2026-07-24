@@ -183,6 +183,13 @@
             android:parentActivityName=".activities.MainActivity" />
 
         <activity
+            android:name=".activities.TrashActivity"
+            android:configChanges="orientation"
+            android:exported="false"
+            android:label="@string/recycle_bin"
+            android:parentActivityName=".activities.MainActivity" />
+
+        <activity
             android:name="com.goodwy.commons.activities.PurchaseActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"

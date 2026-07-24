@@ -770,12 +770,27 @@ class StorageFragment(
                 val pm = context.packageManager
                 val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
-                appsSizeLong = 0
-                for (appInfo in packages) {
+                // Fetch the storage manager + volume list ONCE instead of once per app.
+                val storageStatsManager = context.getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
+                val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+                val storageVolumes = storageManager.storageVolumes
+                val userHandle: UserHandle = android.os.Process.myUserHandle()
+
+                var runningTotal = 0L
+                val updateEveryN = 20 // batch UI updates instead of posting on every single app
+
+                packages.forEachIndexed { index, appInfo ->
                     try {
-                        appsSizeLong += getAppStorage(context, appInfo.packageName)
+                        runningTotal += getAppStorage(storageStatsManager, storageVolumes, userHandle, appInfo.packageName)
+                    } catch (e: PackageManager.NameNotFoundException) {
+                        e.printStackTrace()
+                    }
+
+                    val isLast = index == packages.lastIndex
+                    if (isLast || index % updateEveryN == 0) {
+                        appsSizeLong = runningTotal
                         post {
-                            volumes[volumeName]!!.apply {
+                            volumes[volumeName]?.apply {
                                 appsSize.text = appsSizeLong.formatSize()
                                 //appsProgressbar.progress = (appsSizeLong / SIZE_DIVIDER).toInt()
 
@@ -784,9 +799,10 @@ class StorageFragment(
                                 setLayoutWidth(appsProgress, appsPercent, widthMax)
                             }
                         }
-                        if (appInfo == packages.last()) getVolumeStorageStats(context)
-                    } catch (e: PackageManager.NameNotFoundException) {
-                        e.printStackTrace()
+                    }
+
+                    if (isLast) {
+                        getVolumeStorageStats(context)
                     }
                 }
             }
@@ -836,15 +852,31 @@ class StorageFragment(
         }
     }
 
+    // Kept for backwards compatibility / callers that don't already have a StorageStatsManager
+    // and StorageVolume list handy. Prefer the overload below when looping over many packages,
+    // since this variant re-fetches system services and the volume list on every single call.
     @SuppressLint("NewApi")
     fun getAppStorage(context: Context, packageName: String?): Long {
         val storageStatsManager = context.getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
         val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
         val storageVolumes = storageManager.storageVolumes
+        val userHandle: UserHandle = android.os.Process.myUserHandle()
+        return getAppStorage(storageStatsManager, storageVolumes, userHandle, packageName)
+    }
+
+    // Reuses a pre-fetched StorageStatsManager, StorageVolume list, and UserHandle so callers
+    // that need this for many packages (e.g. every installed app) don't redo that lookup each time.
+    @SuppressLint("NewApi")
+    private fun getAppStorage(
+        storageStatsManager: StorageStatsManager,
+        storageVolumes: List<android.os.storage.StorageVolume>,
+        userHandle: UserHandle,
+        packageName: String?
+    ): Long {
         var appSizeL: Long = 0
         for (storageVolume in storageVolumes) {
             val uuidStr = storageVolume.uuid
-            val uuid: UUID? = try {
+            val uuid: UUID = try {
                 if (TextUtils.isEmpty(uuidStr)) {
                     StorageManager.UUID_DEFAULT
                 } else {
@@ -853,16 +885,15 @@ class StorageFragment(
             } catch (_: java.lang.Exception) {
                 StorageManager.UUID_DEFAULT
             }
-            val storageStats: StorageStats? = try {
-                val userHandle: UserHandle = android.os.Process.myUserHandle()
+            val storageStats: StorageStats = try {
                 @SuppressLint("WrongThread")
-                storageStatsManager.queryStatsForPackage(uuid!!, packageName!!, userHandle)
+                storageStatsManager.queryStatsForPackage(uuid, packageName!!, userHandle)
             } catch (e: java.lang.Exception) {
                 e.printStackTrace()
                 return 0
             }
             // Get the total size of the app
-            appSizeL = storageStats!!.appBytes + storageStats.cacheBytes + storageStats.dataBytes
+            appSizeL = storageStats.appBytes + storageStats.cacheBytes + storageStats.dataBytes
         }
         return appSizeL
     }

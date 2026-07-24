@@ -61,6 +61,8 @@
     <string name="recycle_bin">Recycle Bin</string>
     <string name="trash_empty_placeholder">Recycle bin is empty</string>
     <string name="empty_recycle_bin">Empty recycle bin</string>
+    <string name="restore_all">Restore all</string>
+    <string name="restore_all_successful">All items restored</string>
     <string name="confirm_empty_trash">Permanently delete all items in the recycle bin? This can\'t be undone.</string>
     <string name="confirm_delete_forever">Permanently delete this item? This can\'t be undone.</string>
     <string name="restore_successful">Restored</string>

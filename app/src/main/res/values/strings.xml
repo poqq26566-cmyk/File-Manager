@@ -31,6 +31,8 @@
     <string name="compression_successful">Compression successful</string>
     <string name="decompression_successful">Decompression successful</string>
     <string name="view_extracted_files">View</string>
+    <string name="decompress_file_button">Decompress</string>
+    <string name="still_loading_files">Still loading, this folder has a lot of files…</string>
     <string name="compressing_failed">Compressing failed</string>
     <string name="decompressing_failed">Decompressing failed</string>
 
@@ -51,10 +53,10 @@
     <string name="downloads">Downloads</string>
     <string name="archives">Archives</string>
     <string name="install_packages">Install Packages</string>
-    
+
     <string name="installed">Installed</string>
     <string name="not_installed">Not Installed</string>
-    
+
     <string name="others">Others</string>
     <string name="storage_free">free</string>
     <string name="total_storage">Total storage: %s</string>

@@ -56,6 +56,7 @@ const val VIDEOS = "videos"
 const val AUDIO = "audio"
 const val DOCUMENTS = "documents"
 const val ARCHIVES = "archives"
+const val INSTALL_PACKAGES = "install_packages"
 const val OTHERS = "others"
 const val SHOW_MIMETYPE = "show_mimetype"
 
@@ -110,9 +111,12 @@ val archiveMimeTypes = arrayListOf(
     "multipart/x-zip",
     "application/x-rar",
     "application/vnd.rar",
-    "application/vnd.comicbook-rar",
-    "application/vnd.android.ota",
+    "application/vnd.comicbook-rar"
     //"application/octet-stream",  //rar?
+)
+
+val installPackageMimeTypes = arrayListOf(
+    "application/vnd.android.ota",
     "application/apk",
     "application/vnd.android.package-archive"
 )

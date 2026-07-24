@@ -17,6 +17,14 @@
             app:menu="@menu/menu_mimetypes"
             app:titleTextAppearance="@style/AppTheme.ActionBar.TitleTextStyle" />
 
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/install_packages_tabs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:tabIndicatorColor="?attr/colorPrimary"
+            app:tabRippleColor="@null" />
+
     </com.goodwy.commons.views.MyAppBarLayout>
 
     <RelativeLayout

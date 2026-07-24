@@ -718,7 +718,8 @@ class SettingsActivity : SimpleActivity() {
                 RadioItem(QUERY_LIMIT_SMALL_VALUE, "≤20"),
                 RadioItem(QUERY_LIMIT_MEDIUM_VALUE, "≤50"),
                 RadioItem(QUERY_LIMIT_NORMAL_VALUE, "≤100"),
-                RadioItem(QUERY_LIMIT_BIG_VALUE, "≤200")
+                RadioItem(QUERY_LIMIT_BIG_VALUE, "≤200"),
+                RadioItem(QUERY_LIMIT_HUGE_VALUE, "≤300")
             )
 
             RadioGroupDialog(this@SettingsActivity, items, config.queryLimitRecent, R.string.maximum_number_recent_files) {

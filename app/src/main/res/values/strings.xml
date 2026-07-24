@@ -25,13 +25,13 @@
     <!-- Compression -->
     <string name="compress">Compress</string>
     <string name="decompress">Decompress</string>
+    <string name="decompress_file_button">Decompress</string>
     <string name="compress_as">Compress as</string>
     <string name="compressing">Compressing…</string>
     <string name="decompressing">Decompressing…</string>
     <string name="compression_successful">Compression successful</string>
     <string name="decompression_successful">Decompression successful</string>
     <string name="view_extracted_files">View</string>
-    <string name="decompress_file_button">Decompress</string>
     <string name="still_loading_files">Still loading, this folder has a lot of files…</string>
     <string name="compressing_failed">Compressing failed</string>
     <string name="decompressing_failed">Decompressing failed</string>
@@ -53,11 +53,18 @@
     <string name="downloads">Downloads</string>
     <string name="archives">Archives</string>
     <string name="install_packages">Install Packages</string>
-
+    
     <string name="installed">Installed</string>
     <string name="not_installed">Not Installed</string>
-
+    
     <string name="others">Others</string>
+    <string name="recycle_bin">Recycle Bin</string>
+    <string name="trash_empty_placeholder">Recycle bin is empty</string>
+    <string name="empty_recycle_bin">Empty recycle bin</string>
+    <string name="confirm_empty_trash">Permanently delete all items in the recycle bin? This can\'t be undone.</string>
+    <string name="confirm_delete_forever">Permanently delete this item? This can\'t be undone.</string>
+    <string name="restore_successful">Restored</string>
+    <string name="deleted_forever">Permanently deleted</string>
     <string name="storage_free">free</string>
     <string name="total_storage">Total storage: %s</string>
 

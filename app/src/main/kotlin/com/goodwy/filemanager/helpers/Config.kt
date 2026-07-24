@@ -38,6 +38,16 @@ class Config(context: Context) : BaseConfig(context) {
         }
         set(homeFolder) = prefs.edit().putString(HOME_FOLDER, homeFolder).apply()
 
+    // Last-known storage category sizes (images/videos/apps/total/etc, keyed by volume+category),
+    // so the Storage tab can show real numbers immediately on open instead of "…" while the fresh
+    // scan runs in the background.
+    fun getCachedCategorySize(volumeName: String, category: String): Long =
+        prefs.getLong("cached_size_${volumeName}_$category", -1L)
+
+    fun saveCachedCategorySize(volumeName: String, category: String, size: Long) {
+        prefs.edit().putLong("cached_size_${volumeName}_$category", size).apply()
+    }
+
     fun addFavorite(path: String) {
         val currFavorites = HashSet<String>(favorites)
         currFavorites.add(path)

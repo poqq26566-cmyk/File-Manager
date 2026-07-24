@@ -458,6 +458,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
 
         binding.installPackagesTabs.apply {
+            setBackgroundColor(getProperBackgroundColor())
             if (tabCount == 0) {
                 addTab(newTab().setText(R.string.not_installed))
                 addTab(newTab().setText(R.string.installed))
@@ -564,4 +565,3 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
     }
 }
-       

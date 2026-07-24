@@ -49,7 +49,7 @@
         android:insetBottom="0dp"
         android:paddingTop="@dimen/medium_margin"
         android:paddingBottom="@dimen/medium_margin"
-        android:text="@string/decompress"
+        android:text="@string/decompress_file_button"
         android:textSize="@dimen/bigger_text_size"
         app:cornerRadius="@dimen/big_margin" />
 

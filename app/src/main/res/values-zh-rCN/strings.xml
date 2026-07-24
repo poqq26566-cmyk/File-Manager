@@ -27,6 +27,8 @@
     <string name="compression_successful">压缩成功</string>
     <string name="decompression_successful">解压缩成功</string>
     <string name="view_extracted_files">查看</string>
+    <string name="decompress_file_button">解压文件</string>
+    <string name="still_loading_files">仍在加载,这个分类文件比较多,请稍候…</string>
     <string name="compressing_failed">压缩失败</string>
     <string name="decompressing_failed">解压缩失败</string>
     <string name="manage_favorites">管理收藏</string>
@@ -40,11 +42,11 @@
     <string name="documents">文档</string>
     <string name="downloads">下载</string>
     <string name="archives">压缩包</string>
-    
+
     <string name="install_packages">安装包</string>
     <string name="installed">已安装</string>
     <string name="not_installed">未安装</string>
-    
+
     <string name="others">其他</string>
     <string name="storage_free">可用</string>
     <string name="total_storage">总存储：%s</string>

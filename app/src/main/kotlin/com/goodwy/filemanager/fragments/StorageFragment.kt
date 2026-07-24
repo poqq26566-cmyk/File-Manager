@@ -34,6 +34,7 @@ import com.goodwy.filemanager.R
 import com.goodwy.filemanager.activities.MainActivity
 import com.goodwy.filemanager.activities.MimeTypesActivity
 import com.goodwy.filemanager.activities.SimpleActivity
+import com.goodwy.filemanager.activities.TrashActivity
 import com.goodwy.filemanager.adapters.ItemsAdapter
 import com.goodwy.filemanager.databinding.ItemStorageVolumeBinding
 import com.goodwy.filemanager.databinding.StorageFragmentBinding
@@ -84,7 +85,11 @@ class StorageFragment(
                     (activity as? MainActivity)?.openedDirectory()
                     refreshFragment()
                     if (volumeName == if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD) getAllAppSize(volumeName)
-                    getVolumeStorageStats(context) // already updates the per-category size labels, no need to also call getSizes()
+                    // getVolumeStorageStats does a full synchronous MediaStore scan — must run off the
+                    // main thread, or pulling to refresh freezes the UI and can trigger an ANR.
+                    ensureBackgroundThread {
+                        getVolumeStorageStats(context)
+                    }
                 }
 
                 if (volumeName == if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD) {
@@ -184,6 +189,22 @@ class StorageFragment(
                 archivesHolder.setOnClickListener { launchMimetypeActivity(ARCHIVES, volumeName) }
                 installPackagesHolder.setOnClickListener { launchMimetypeActivity(INSTALL_PACKAGES, volumeName) }
                 othersHolder.setOnClickListener { launchMimetypeActivity(OTHERS, volumeName) }
+
+                val isPrimaryVolume = volumeName == if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
+                trashHolder.beVisibleIf(isPrimaryVolume)
+                if (isPrimaryVolume) {
+                    trashHolder.setOnClickListener {
+                        Intent(context, TrashActivity::class.java).apply {
+                            context.startActivity(this)
+                        }
+                    }
+                    ensureBackgroundThread {
+                        val trashSizeLong = com.goodwy.filemanager.helpers.TrashManager.getTotalSize(context)
+                        post {
+                            trashSize.text = trashSizeLong.formatSize()
+                        }
+                    }
+                }
             }
             binding.storageVolumesHolder.addView(volumeBinding.root)
         }
@@ -989,3 +1010,4 @@ class StorageFragment(
 
     override fun myRecyclerView() = binding.storageNestedScrollview
 }
+            

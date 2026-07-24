@@ -60,6 +60,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                 AUDIO -> R.string.audio
                 DOCUMENTS -> R.string.documents
                 ARCHIVES -> R.string.archives
+                INSTALL_PACKAGES -> R.string.install_packages
                 OTHERS -> R.string.others
                 else -> {
                     toast(R.string.unknown_error_occurred)
@@ -332,10 +333,16 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                             }
                         }
 
+                        INSTALL_PACKAGES -> {
+                            if (installPackageMimeTypes.contains(fullMimetype)) {
+                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
+                            }
+                        }
+
                         OTHERS -> {
                             if (mimetype != "image" && mimetype != "video" && mimetype != "audio" && mimetype != "text" &&
                                 !extraAudioMimeTypes.contains(fullMimetype) && !extraDocumentMimeTypes.contains(fullMimetype) &&
-                                !archiveMimeTypes.contains(fullMimetype)
+                                !archiveMimeTypes.contains(fullMimetype) && !installPackageMimeTypes.contains(fullMimetype)
                             ) {
                                 fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
                             }

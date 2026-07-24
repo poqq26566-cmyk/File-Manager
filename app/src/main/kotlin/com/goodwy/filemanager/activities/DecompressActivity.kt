@@ -1,7 +1,9 @@
 package com.goodwy.filemanager.activities
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import com.google.android.material.snackbar.Snackbar
 import com.goodwy.commons.dialogs.EnterPasswordDialog
 import com.goodwy.commons.dialogs.FilePickerDialog
 import com.goodwy.commons.extensions.createDirectorySync
@@ -23,6 +25,7 @@ import com.goodwy.filemanager.adapters.DecompressItemsAdapter
 import com.goodwy.filemanager.databinding.ActivityDecompressBinding
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.extensions.setLastModified
+import com.goodwy.filemanager.helpers.EXTRA_OPEN_PATH
 import com.goodwy.filemanager.models.ListItem
 import net.lingala.zip4j.exception.ZipException
 import net.lingala.zip4j.exception.ZipException.Type
@@ -157,12 +160,14 @@ class DecompressActivity : SimpleActivity() {
                 zipInputStream.setPassword(password?.toCharArray())
             }
             val buffer = ByteArray(1024)
+            var extractedFolderPath = ""
 
             zipInputStream.use {
                 while (true) {
                     val entry = zipInputStream.nextEntry ?: break
                     val filename = filename.substringBeforeLast(".")
                     val parent = "$destination/$filename"
+                    extractedFolderPath = parent
                     val newPath = "$parent/${entry.fileName.trimEnd('/')}"
 
                     if (!getDoesFilePathExist(parent)) {
@@ -196,12 +201,30 @@ class DecompressActivity : SimpleActivity() {
                     outputFile.setLastModified(entry)
                 }
 
-                toast(R.string.decompression_successful)
-                finish()
+                runOnUiThread {
+                    showDecompressionSuccessSnackbar(extractedFolderPath)
+                }
             }
         } catch (e: Exception) {
             showErrorToast(e)
         }
+    }
+
+    // Mirrors the OEM file manager's "decompress successful, tap View to jump there" flow instead
+    // of just toasting and closing the screen right away.
+    private fun showDecompressionSuccessSnackbar(extractedFolderPath: String) {
+        val snackbar = Snackbar.make(binding.root, R.string.decompression_successful, Snackbar.LENGTH_LONG)
+        if (extractedFolderPath.isNotEmpty()) {
+            snackbar.setAction(R.string.view_extracted_files) {
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    putExtra(EXTRA_OPEN_PATH, extractedFolderPath)
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(intent)
+                finish()
+            }
+        }
+        snackbar.show()
     }
 
     private fun getFolderItems(parent: String): ArrayList<ListItem> {

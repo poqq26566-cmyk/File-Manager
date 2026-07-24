@@ -51,6 +51,8 @@
     <string name="recycle_bin">回收站</string>
     <string name="trash_empty_placeholder">回收站是空的</string>
     <string name="empty_recycle_bin">清空回收站</string>
+    <string name="restore_all">一键恢复</string>
+    <string name="restore_all_successful">已全部恢复</string>
     <string name="confirm_empty_trash">确定要彻底删除回收站里的所有内容吗?此操作无法撤销。</string>
     <string name="confirm_delete_forever">确定要彻底删除这个项目吗?此操作无法撤销。</string>
     <string name="restore_successful">已恢复</string>

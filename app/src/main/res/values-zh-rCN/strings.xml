@@ -39,7 +39,11 @@
     <string name="documents">文档</string>
     <string name="downloads">下载</string>
     <string name="archives">压缩包</string>
+    
     <string name="install_packages">安装包</string>
+    <string name="installed">已安装</string>
+    <string name="not_installed">未安装</string>
+    
     <string name="others">其他</string>
     <string name="storage_free">可用</string>
     <string name="total_storage">总存储：%s</string>

@@ -94,7 +94,37 @@ class StorageFragment(
                     storageName.setText(R.string.sd_card)
                 }
 
-                totalSpace.text = String.format(context.getString(R.string.storage_used), "…", "…")
+                // Show the last-known numbers immediately (feels instant) while a fresh scan
+                // refreshes everything in the background, instead of just showing "…" every time.
+                val cachedTotal = context.config.getCachedCategorySize(volumeName, "total")
+                val cachedFree = context.config.getCachedCategorySize(volumeName, "free")
+                if (cachedTotal >= 0 && cachedFree >= 0) {
+                    totalStorageSpaceLong = cachedTotal
+                    totalSpace.text = String.format(context.getString(R.string.storage_used), cachedFree.formatSizeThousand(), cachedTotal.formatSizeThousand())
+                } else {
+                    totalSpace.text = String.format(context.getString(R.string.storage_used), "…", "…")
+                }
+
+                val cachedApps = context.config.getCachedCategorySize(volumeName, "apps")
+                if (cachedApps >= 0) {
+                    appsSizeLong = cachedApps
+                    appsSize.text = cachedApps.formatSize()
+                }
+
+                mapOf(
+                    IMAGES to imagesSize,
+                    VIDEOS to videosSize,
+                    AUDIO to audioSize,
+                    DOCUMENTS to documentsSize,
+                    ARCHIVES to archivesSize,
+                    INSTALL_PACKAGES to installPackagesSize,
+                    OTHERS to othersSize
+                ).forEach { (category, label) ->
+                    val cachedSize = context.config.getCachedCategorySize(volumeName, category)
+                    if (cachedSize >= 0) {
+                        label.text = cachedSize.formatSize()
+                    }
+                }
 
                 if (volumeNames.size > 1) {
                     val primaryColor = context.getProperPrimaryColor()
@@ -401,6 +431,18 @@ class StorageFragment(
             val fileSizeArchives = filesSize[ARCHIVES]!!
             val fileSizeInstallPackages = filesSize[INSTALL_PACKAGES]!!
             val fileSizeOthers = filesSize[OTHERS]!!
+
+            context.config.apply {
+                saveCachedCategorySize(volumeName, IMAGES, fileSizeImages)
+                saveCachedCategorySize(volumeName, VIDEOS, fileSizeVideos)
+                saveCachedCategorySize(volumeName, AUDIO, fileSizeAudios)
+                saveCachedCategorySize(volumeName, DOCUMENTS, fileSizeDocuments)
+                saveCachedCategorySize(volumeName, ARCHIVES, fileSizeArchives)
+                saveCachedCategorySize(volumeName, INSTALL_PACKAGES, fileSizeInstallPackages)
+                saveCachedCategorySize(volumeName, OTHERS, fileSizeOthers)
+                saveCachedCategorySize(volumeName, "total", totalStorageSpace)
+                saveCachedCategorySize(volumeName, "free", freeStorageSpace)
+            }
 
             post {
                 volumes[volumeName]?.apply {
@@ -817,6 +859,7 @@ class StorageFragment(
                     }
 
                     if (isLast) {
+                        context.config.saveCachedCategorySize(volumeName, "apps", appsSizeLong)
                         getVolumeStorageStats(context)
                     }
                 }
@@ -946,4 +989,3 @@ class StorageFragment(
 
     override fun myRecyclerView() = binding.storageNestedScrollview
 }
-     

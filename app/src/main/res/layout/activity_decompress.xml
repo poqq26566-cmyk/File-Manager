@@ -14,7 +14,6 @@
             android:id="@+id/decompress_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:menu="@menu/menu_decompress"
             app:title="@string/decompress"
             app:titleTextAppearance="@style/AppTheme.ActionBar.TitleTextStyle" />
 
@@ -24,6 +23,7 @@
         android:id="@+id/decompress_wrapper"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="72dp"
         android:fillViewport="true"
         android:scrollbars="none"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -38,6 +38,20 @@
             app:layoutManager="com.goodwy.commons.views.MyLinearLayoutManager" />
 
     </RelativeLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/decompress_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="@dimen/activity_margin"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:paddingTop="@dimen/medium_margin"
+        android:paddingBottom="@dimen/medium_margin"
+        android:text="@string/decompress"
+        android:textSize="@dimen/bigger_text_size"
+        app:cornerRadius="@dimen/big_margin" />
 
     <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progress_indicator"

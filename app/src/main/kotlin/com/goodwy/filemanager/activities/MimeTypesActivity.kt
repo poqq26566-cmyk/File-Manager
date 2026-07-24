@@ -49,6 +49,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     private var currentVolume = if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
     private var allInstallItems = ArrayList<ListItem>()
     private var installTabIndex = 0 // 0 = not installed, 1 = installed
+    @Volatile private var isFetching = false
 
     private val cacheKey get() = "$currentVolume:$currentMimeType"
 
@@ -82,9 +83,19 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             }
         )
 
-        // Show the cached list from last time immediately (feels instant), then refresh underneath.
+        // Show the cached list from last time immediately, but do the sort/adapter setup off the
+        // main thread first — sorting hundreds of items can be slow if the comparator touches the
+        // filesystem per item (size/date), and doing that synchronously in onCreate blocks input
+        // (including Back) until it finishes.
         itemsCache[cacheKey]?.let { cached ->
-            addItems(ArrayList(cached))
+            ensureBackgroundThread {
+                val sorted = ArrayList(cached)
+                FileDirItem.sorting = config.getFolderSorting(currentMimeType)
+                sorted.sort()
+                runOnUiThread {
+                    addItems(sorted)
+                }
+            }
         }
 
         ensureBackgroundThread {
@@ -377,6 +388,14 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             val cursor = contentResolver.query(uri, projection, selection, selectionArgs, null)
             cursor?.use {
                 while (it.moveToNext()) {
+                    // Bail out as soon as the screen is gone (e.g. user pressed back) instead of
+                    // wastefully finishing the scan and throwing the result away — on a loaded
+                    // device this extra work was competing with the UI thread for CPU time and
+                    // made navigating back feel like a freeze.
+                    if (isDestroyed || isFinishing) {
+                        break
+                    }
+
                     try {
                         val fullMimetype = it.getStringValue(MediaStore.Files.FileColumns.MIME_TYPE)?.lowercase(Locale.getDefault()) ?: continue
                         val name = it.getStringValue(MediaStore.Files.FileColumns.DISPLAY_NAME)
@@ -453,6 +472,11 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     }
 
     private fun reFetchItems() {
+        if (isFetching) {
+            return
+        }
+        isFetching = true
+
         runOnUiThread {
             if (storedItems.isEmpty()) {
                 binding.mimetypesProgressBar.beVisible()
@@ -460,25 +484,42 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             }
         }
 
+        // Safety net: if a category genuinely has a huge number of files and the query is just
+        // taking a while, let the user know it's still working instead of looking frozen.
+        val stillLoadingHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        val stillLoadingRunnable = Runnable {
+            if (isFetching && !isDestroyed && !isFinishing) {
+                toast(R.string.still_loading_files)
+            }
+        }
+        stillLoadingHandler.postDelayed(stillLoadingRunnable, 10000L)
+
         getProperFileDirItems { fileDirItems ->
+            stillLoadingHandler.removeCallbacks(stillLoadingRunnable)
             val listItems = getListItemsFromFileDirItems(fileDirItems)
 
             if (currentMimeType == INSTALL_PACKAGES) {
                 allInstallItems = listItems
                 val filtered = filterInstallItems(listItems)
+                FileDirItem.sorting = config.getFolderSorting(currentMimeType)
+                filtered.sort()
                 runOnUiThread {
                     addItems(filtered)
                     if (currentViewType != config.getFolderViewType(currentMimeType)) {
                         setupLayoutManager()
                     }
+                    isFetching = false
                 }
             } else {
                 itemsCache[cacheKey] = listItems
+                FileDirItem.sorting = config.getFolderSorting(currentMimeType)
+                listItems.sort()
                 runOnUiThread {
                     addItems(listItems)
                     if (currentViewType != config.getFolderViewType(currentMimeType)) {
                         setupLayoutManager()
                     }
+                    isFetching = false
                 }
             }
         }

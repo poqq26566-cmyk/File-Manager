@@ -45,6 +45,8 @@ import com.goodwy.filemanager.interfaces.ItemOperationsListener
 import com.goodwy.filemanager.models.ListItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import java.util.*
 
@@ -785,27 +787,32 @@ class StorageFragment(
                 val userHandle: UserHandle = android.os.Process.myUserHandle()
 
                 var runningTotal = 0L
-                val updateEveryN = 20 // batch UI updates instead of posting on every single app
+                val chunkSize = 20 // run each app's (blocking) IPC query in parallel instead of one at a time
 
-                packages.forEachIndexed { index, appInfo ->
-                    try {
-                        runningTotal += getAppStorage(storageStatsManager, storageVolumes, userHandle, appInfo.packageName)
-                    } catch (e: PackageManager.NameNotFoundException) {
-                        e.printStackTrace()
-                    }
-
-                    val isLast = index == packages.lastIndex
-                    if (isLast || index % updateEveryN == 0) {
-                        appsSizeLong = runningTotal
-                        post {
-                            volumes[volumeName]?.apply {
-                                appsSize.text = appsSizeLong.formatSize()
-                                //appsProgressbar.progress = (appsSizeLong / SIZE_DIVIDER).toInt()
-
-                                val widthMax = mainStorageProgressbar.width
-                                val appsPercent = appsSizeLong.divideToPercent(totalStorageSpaceLong)
-                                setLayoutWidth(appsProgress, appsPercent, widthMax)
+                packages.chunked(chunkSize).forEachIndexed { chunkIndex, chunk ->
+                    val results = chunk.map { appInfo ->
+                        async {
+                            try {
+                                getAppStorage(storageStatsManager, storageVolumes, userHandle, appInfo.packageName)
+                            } catch (e: PackageManager.NameNotFoundException) {
+                                e.printStackTrace()
+                                0L
                             }
+                        }
+                    }.awaitAll()
+
+                    runningTotal += results.sum()
+                    appsSizeLong = runningTotal
+
+                    val isLast = (chunkIndex + 1) * chunkSize >= packages.size
+                    post {
+                        volumes[volumeName]?.apply {
+                            appsSize.text = appsSizeLong.formatSize()
+                            //appsProgressbar.progress = (appsSizeLong / SIZE_DIVIDER).toInt()
+
+                            val widthMax = mainStorageProgressbar.width
+                            val appsPercent = appsSizeLong.divideToPercent(totalStorageSpaceLong)
+                            setLayoutWidth(appsProgress, appsPercent, widthMax)
                         }
                     }
 
@@ -939,3 +946,4 @@ class StorageFragment(
 
     override fun myRecyclerView() = binding.storageNestedScrollview
 }
+     

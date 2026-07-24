@@ -2,6 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/restore_all"
+        android:icon="@drawable/ic_undo_vector"
+        android:title="@string/restore_all"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/empty_trash"
         android:icon="@drawable/ic_delete_outline"
         android:title="@string/empty_recycle_bin"

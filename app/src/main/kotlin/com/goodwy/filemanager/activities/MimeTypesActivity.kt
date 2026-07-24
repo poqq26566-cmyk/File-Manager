@@ -32,6 +32,12 @@ import com.goodwy.filemanager.models.ListItem
 import java.util.Locale
 
 class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
+    companion object {
+        // Cache the last loaded list per volume+mimetype so re-opening a category shows something
+        // instantly instead of a blank screen, while a fresh query silently refreshes it underneath.
+        private val itemsCache = mutableMapOf<String, ArrayList<ListItem>>()
+    }
+
     private val binding by viewBinding(ActivityMimetypesBinding::inflate)
     private var isSearchOpen = false
     private var currentMimeType = ""
@@ -43,6 +49,8 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     private var currentVolume = if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
     private var allInstallItems = ArrayList<ListItem>()
     private var installTabIndex = 0 // 0 = not installed, 1 = installed
+
+    private val cacheKey get() = "$currentVolume:$currentMimeType"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         useChangeAutoTheme = false
@@ -73,6 +81,11 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                 }
             }
         )
+
+        // Show the cached list from last time immediately (feels instant), then refresh underneath.
+        itemsCache[cacheKey]?.let { cached ->
+            addItems(ArrayList(cached))
+        }
 
         ensureBackgroundThread {
             reFetchItems()
@@ -419,6 +432,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             binding.mimetypesList.scheduleLayoutAnimation()
         }
 
+        binding.mimetypesProgressBar.beGone()
         binding.mimetypesPlaceholder.beVisibleIf(items.isEmpty())
     }
 
@@ -439,6 +453,13 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     }
 
     private fun reFetchItems() {
+        runOnUiThread {
+            if (storedItems.isEmpty()) {
+                binding.mimetypesProgressBar.beVisible()
+                binding.mimetypesPlaceholder.beGone()
+            }
+        }
+
         getProperFileDirItems { fileDirItems ->
             val listItems = getListItemsFromFileDirItems(fileDirItems)
 
@@ -452,6 +473,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                     }
                 }
             } else {
+                itemsCache[cacheKey] = listItems
                 runOnUiThread {
                     addItems(listItems)
                     if (currentViewType != config.getFolderViewType(currentMimeType)) {
@@ -593,4 +615,3 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
     }
 }
-        

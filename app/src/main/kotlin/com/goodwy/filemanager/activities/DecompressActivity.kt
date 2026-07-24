@@ -7,11 +7,13 @@ import com.google.android.material.snackbar.Snackbar
 import com.goodwy.commons.dialogs.EnterPasswordDialog
 import com.goodwy.commons.dialogs.FilePickerDialog
 import com.goodwy.commons.extensions.createDirectorySync
+import com.goodwy.commons.extensions.getContrastColor
 import com.goodwy.commons.extensions.getDoesFilePathExist
 import com.goodwy.commons.extensions.getFileOutputStreamSync
 import com.goodwy.commons.extensions.getFilenameFromPath
 import com.goodwy.commons.extensions.getMimeType
 import com.goodwy.commons.extensions.getParentPath
+import com.goodwy.commons.extensions.getProperPrimaryColor
 import com.goodwy.commons.extensions.getRealPathFromURI
 import com.goodwy.commons.extensions.internalStoragePath
 import com.goodwy.commons.extensions.isGone
@@ -74,6 +76,10 @@ class DecompressActivity : SimpleActivity() {
     override fun onResume() {
         super.onResume()
         setupTopAppBar(binding.decompressAppbar, NavigationIcon.Arrow)
+        binding.decompressButton.apply {
+            backgroundTintList = android.content.res.ColorStateList.valueOf(getProperPrimaryColor())
+            setTextColor(getProperPrimaryColor().getContrastColor())
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -82,12 +88,8 @@ class DecompressActivity : SimpleActivity() {
     }
 
     private fun setupOptionsMenu() {
-        binding.decompressToolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.decompress -> decompressFiles()
-                else -> return@setOnMenuItemClickListener false
-            }
-            return@setOnMenuItemClickListener true
+        binding.decompressButton.setOnClickListener {
+            decompressFiles()
         }
     }
 

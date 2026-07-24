@@ -282,6 +282,66 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         searchQueryChanged("")
     }
 
+    private fun buildMimeTypeSelection(): Pair<String, Array<String>> {
+        val col = MediaStore.Files.FileColumns.MIME_TYPE
+        val selection = StringBuilder()
+        val args = ArrayList<String>()
+
+        fun likePrefix(prefix: String) {
+            if (selection.isNotEmpty()) selection.append(" OR ")
+            selection.append("$col LIKE ?")
+            args.add("$prefix/%")
+        }
+
+        fun inList(values: List<String>) {
+            if (values.isEmpty()) return
+            if (selection.isNotEmpty()) selection.append(" OR ")
+            selection.append("$col IN (${values.joinToString(",") { "?" }})")
+            args.addAll(values)
+        }
+
+        fun notLikePrefix(prefix: String) {
+            if (selection.isNotEmpty()) selection.append(" AND ")
+            selection.append("$col NOT LIKE ?")
+            args.add("$prefix/%")
+        }
+
+        fun notInList(values: List<String>) {
+            if (values.isEmpty()) return
+            if (selection.isNotEmpty()) selection.append(" AND ")
+            selection.append("$col NOT IN (${values.joinToString(",") { "?" }})")
+            args.addAll(values)
+        }
+
+        when (currentMimeType) {
+            IMAGES -> likePrefix("image")
+            VIDEOS -> likePrefix("video")
+            AUDIO -> {
+                likePrefix("audio")
+                inList(extraAudioMimeTypes)
+            }
+
+            DOCUMENTS -> {
+                likePrefix("text")
+                inList(extraDocumentMimeTypes)
+            }
+
+            ARCHIVES -> inList(archiveMimeTypes)
+            INSTALL_PACKAGES -> inList(installPackageMimeTypes)
+            OTHERS -> {
+                notLikePrefix("image")
+                notLikePrefix("video")
+                notLikePrefix("audio")
+                notLikePrefix("text")
+                notInList(extraAudioMimeTypes + extraDocumentMimeTypes + archiveMimeTypes + installPackageMimeTypes)
+            }
+        }
+
+        // MIME_TYPE can be NULL for some rows (e.g. folders); none of our categories want those.
+        val fullSelection = "$col IS NOT NULL" + if (selection.isNotEmpty()) " AND (${selection})" else ""
+        return Pair(fullSelection, args.toTypedArray())
+    }
+
     private fun getProperFileDirItems(callback: (ArrayList<FileDirItem>) -> Unit) {
         val fileDirItems = ArrayList<FileDirItem>()
         val showHidden = config.shouldShowHidden()
@@ -294,73 +354,35 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             MediaStore.Files.FileColumns.DATE_MODIFIED
         )
 
+        // Filter with a WHERE clause so the query only returns rows for this category, instead of
+        // pulling every single file on the device (which used to be the case, and got very slow
+        // on storage with lots of files since the whole table was scanned and transferred just to
+        // throw most rows away in Kotlin afterwards).
+        val (selection, selectionArgs) = buildMimeTypeSelection()
+
         try {
-            queryCursor(uri, projection) { cursor ->
-                try {
-                    val fullMimetype = cursor.getStringValue(MediaStore.Files.FileColumns.MIME_TYPE)?.lowercase(Locale.getDefault()) ?: return@queryCursor
-                    val name = cursor.getStringValue(MediaStore.Files.FileColumns.DISPLAY_NAME)
-                    val path = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
+            val cursor = contentResolver.query(uri, projection, selection, selectionArgs, null)
+            cursor?.use {
+                while (it.moveToNext()) {
+                    try {
+                        val fullMimetype = it.getStringValue(MediaStore.Files.FileColumns.MIME_TYPE)?.lowercase(Locale.getDefault()) ?: continue
+                        val name = it.getStringValue(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                        val path = it.getStringValue(MediaStore.Files.FileColumns.DATA)
 
-                    val isHiddenFile = name.startsWith(".")
-                    if (!showHidden && (isHiddenFile || path.isPathInHiddenFolder())) {
-                        return@queryCursor
+                        val isHiddenFile = name.startsWith(".")
+                        if (!showHidden && (isHiddenFile || path.isPathInHiddenFolder())) {
+                            continue
+                        }
+
+                        val size = it.getLongValue(MediaStore.Files.FileColumns.SIZE)
+                        if (size == 0L) {
+                            continue
+                        }
+
+                        val lastModified = it.getLongValue(MediaStore.Files.FileColumns.DATE_MODIFIED) * 1000
+                        fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
+                    } catch (e: Exception) {
                     }
-
-                    val size = cursor.getLongValue(MediaStore.Files.FileColumns.SIZE)
-                    if (size == 0L) {
-                        return@queryCursor
-                    }
-
-                    val lastModified = cursor.getLongValue(MediaStore.Files.FileColumns.DATE_MODIFIED) * 1000
-
-                    val mimetype = fullMimetype.substringBefore("/")
-                    when (currentMimeType) {
-                        IMAGES -> {
-                            if (mimetype == "image") {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-
-                        VIDEOS -> {
-                            if (mimetype == "video") {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-
-                        AUDIO -> {
-                            if (mimetype == "audio" || extraAudioMimeTypes.contains(fullMimetype)) {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-
-                        DOCUMENTS -> {
-                            if (mimetype == "text" || extraDocumentMimeTypes.contains(fullMimetype)) {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-
-                        ARCHIVES -> {
-                            if (archiveMimeTypes.contains(fullMimetype)) {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-
-                        INSTALL_PACKAGES -> {
-                            if (installPackageMimeTypes.contains(fullMimetype)) {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-
-                        OTHERS -> {
-                            if (mimetype != "image" && mimetype != "video" && mimetype != "audio" && mimetype != "text" &&
-                                !extraAudioMimeTypes.contains(fullMimetype) && !extraDocumentMimeTypes.contains(fullMimetype) &&
-                                !archiveMimeTypes.contains(fullMimetype) && !installPackageMimeTypes.contains(fullMimetype)
-                            ) {
-                                fileDirItems.add(FileDirItem(path, name, false, 0, size, lastModified))
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
                 }
             }
         } catch (e: Exception) {
@@ -571,3 +593,4 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
     }
 }
+        

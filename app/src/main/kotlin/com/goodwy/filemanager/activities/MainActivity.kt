@@ -42,6 +42,7 @@ import com.goodwy.filemanager.fragments.RecentsFragment
 import com.goodwy.filemanager.fragments.StorageFragment
 import com.goodwy.filemanager.helpers.FOLDER_HOME
 import com.goodwy.filemanager.helpers.FOLDER_INTERNAL
+import com.goodwy.filemanager.helpers.EXTRA_OPEN_PATH
 import com.goodwy.filemanager.helpers.MAX_COLUMN_COUNT
 import com.goodwy.filemanager.helpers.RECENTS_FRAGMENT_PATH
 import com.goodwy.filemanager.helpers.RootHelpers
@@ -108,7 +109,23 @@ class MainActivity : SimpleActivity() {
             checkWhatsNewDialog()
             checkIfRootAvailable()
             checkInvalidFavorites()
+            handleOpenPathExtra()
         }
+    }
+
+    private fun handleOpenPathExtra() {
+        val pathToOpen = intent.getStringExtra(EXTRA_OPEN_PATH) ?: return
+        val filesTabIndex = mTabsToShow.indexOf(TAB_FILES)
+        if (filesTabIndex != -1) {
+            binding.mainViewPager.currentItem = filesTabIndex
+        }
+        openPath(pathToOpen, forceRefresh = true)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOpenPathExtra()
     }
 
     override fun onResume() {

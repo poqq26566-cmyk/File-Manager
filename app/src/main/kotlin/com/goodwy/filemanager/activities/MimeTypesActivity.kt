@@ -90,6 +90,12 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     override fun onResume() {
         super.onResume()
         setupTopAppBar(binding.mimetypesAppbar, NavigationIcon.Arrow, searchMenuItem = searchMenuItem)
+
+        if (currentMimeType.isNotEmpty() && storedItems.isEmpty()) {
+            ensureBackgroundThread {
+                reFetchItems()
+            }
+        }
     }
 
     private fun refreshMenuItems() {

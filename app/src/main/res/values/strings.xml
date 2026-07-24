@@ -50,10 +50,10 @@
     <string name="downloads">Downloads</string>
     <string name="archives">Archives</string>
     <string name="install_packages">Install Packages</string>
-    <string name="install_packages">Install Packages</string>
+    
     <string name="installed">Installed</string>
     <string name="not_installed">Not Installed</string>
-    <string name="others">Others</string>
+    
     <string name="others">Others</string>
     <string name="storage_free">free</string>
     <string name="total_storage">Total storage: %s</string>

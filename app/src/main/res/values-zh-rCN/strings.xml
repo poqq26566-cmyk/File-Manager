@@ -21,13 +21,13 @@
     <string name="other_file">其他文件</string>
     <string name="compress">压缩</string>
     <string name="decompress">解压缩</string>
+    <string name="decompress_file_button">解压文件</string>
     <string name="compress_as">压缩为</string>
     <string name="compressing">压缩中…</string>
     <string name="decompressing">解压缩中…</string>
     <string name="compression_successful">压缩成功</string>
     <string name="decompression_successful">解压缩成功</string>
     <string name="view_extracted_files">查看</string>
-    <string name="decompress_file_button">解压文件</string>
     <string name="still_loading_files">仍在加载,这个分类文件比较多,请稍候…</string>
     <string name="compressing_failed">压缩失败</string>
     <string name="decompressing_failed">解压缩失败</string>
@@ -42,12 +42,19 @@
     <string name="documents">文档</string>
     <string name="downloads">下载</string>
     <string name="archives">压缩包</string>
-
+    
     <string name="install_packages">安装包</string>
     <string name="installed">已安装</string>
     <string name="not_installed">未安装</string>
-
+    
     <string name="others">其他</string>
+    <string name="recycle_bin">回收站</string>
+    <string name="trash_empty_placeholder">回收站是空的</string>
+    <string name="empty_recycle_bin">清空回收站</string>
+    <string name="confirm_empty_trash">确定要彻底删除回收站里的所有内容吗?此操作无法撤销。</string>
+    <string name="confirm_delete_forever">确定要彻底删除这个项目吗?此操作无法撤销。</string>
+    <string name="restore_successful">已恢复</string>
+    <string name="deleted_forever">已彻底删除</string>
     <string name="storage_free">可用</string>
     <string name="total_storage">总存储：%s</string>
     <string name="enable_root_access">启用 root 访问</string>

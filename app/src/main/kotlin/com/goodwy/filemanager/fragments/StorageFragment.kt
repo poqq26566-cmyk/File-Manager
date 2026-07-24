@@ -151,6 +151,7 @@ class StorageFragment(
                 audioHolder.setOnClickListener { launchMimetypeActivity(AUDIO, volumeName) }
                 documentsHolder.setOnClickListener { launchMimetypeActivity(DOCUMENTS, volumeName) }
                 archivesHolder.setOnClickListener { launchMimetypeActivity(ARCHIVES, volumeName) }
+                installPackagesHolder.setOnClickListener { launchMimetypeActivity(INSTALL_PACKAGES, volumeName) }
                 othersHolder.setOnClickListener { launchMimetypeActivity(OTHERS, volumeName) }
             }
             binding.storageVolumesHolder.addView(volumeBinding.root)
@@ -209,6 +210,7 @@ class StorageFragment(
                     audioChevron,
                     documentsChevron,
                     archivesChevron,
+                    installPackagesChevron,
                     othersChevron
                 ).forEach {
                     it.setColorFilter(textColor)
@@ -220,6 +222,7 @@ class StorageFragment(
                     audioDivider,
                     documentDivider,
                     archiveDivider,
+                    installDivider,
                     otherDivider,
                     systemDivider,
                     systemEndDivider
@@ -269,6 +272,7 @@ class StorageFragment(
             val fileSizeAudios = filesSize[AUDIO]!!
             val fileSizeDocuments = filesSize[DOCUMENTS]!!
             val fileSizeArchives = filesSize[ARCHIVES]!!
+            val fileSizeInstallPackages = filesSize[INSTALL_PACKAGES]!!
             val fileSizeOthers = filesSize[OTHERS]!!
 
             post {
@@ -287,6 +291,8 @@ class StorageFragment(
 
                     archivesSize.text = fileSizeArchives.formatSize()
                     //archivesProgressbar.progress = (fileSizeArchives / SIZE_DIVIDER).toInt()
+
+                    installPackagesSize.text = fileSizeInstallPackages.formatSize()
 
                     othersSize.text = fileSizeOthers.formatSize()
                     //othersProgressbar.progress = (fileSizeOthers / SIZE_DIVIDER).toInt()
@@ -308,6 +314,7 @@ class StorageFragment(
         var audioSize = 0L
         var documentsSize = 0L
         var archivesSize = 0L
+        var installPackagesSize = 0L
         var othersSize = 0L
         try {
             context.queryCursor(uri, projection) { cursor ->
@@ -334,6 +341,7 @@ class StorageFragment(
                             when {
                                 extraDocumentMimeTypes.contains(mimeType) -> documentsSize += size
                                 extraAudioMimeTypes.contains(mimeType) -> audioSize += size
+                                installPackageMimeTypes.contains(mimeType) -> installPackagesSize += size
                                 archiveMimeTypes.contains(mimeType) -> archivesSize += size
                                 else -> othersSize += size
                             }
@@ -351,6 +359,7 @@ class StorageFragment(
             put(AUDIO, audioSize)
             put(DOCUMENTS, documentsSize)
             put(ARCHIVES, archivesSize)
+            put(INSTALL_PACKAGES, installPackagesSize)
             put(OTHERS, othersSize)
         }
 
@@ -389,6 +398,7 @@ class StorageFragment(
             val fileSizeAudios = filesSize[AUDIO]!!
             val fileSizeDocuments = filesSize[DOCUMENTS]!!
             val fileSizeArchives = filesSize[ARCHIVES]!!
+            val fileSizeInstallPackages = filesSize[INSTALL_PACKAGES]!!
             val fileSizeOthers = filesSize[OTHERS]!!
 
             post {
@@ -399,7 +409,7 @@ class StorageFragment(
 
                     val appsSizeL = if (storageVolume.isPrimary) appsSizeLong else 0
                     val fileSizeSystem =
-                        totalStorageSpace - freeStorageSpace - appsSizeL - fileSizeImages - fileSizeVideos - fileSizeAudios - fileSizeDocuments - fileSizeArchives - fileSizeOthers
+                        totalStorageSpace - freeStorageSpace - appsSizeL - fileSizeImages - fileSizeVideos - fileSizeAudios - fileSizeDocuments - fileSizeArchives - fileSizeInstallPackages - fileSizeOthers
                     val widthMax = mainStorageProgressbar.width
 
                     if (storageVolume.isPrimary) {
@@ -426,6 +436,10 @@ class StorageFragment(
                     val archivesPercent = fileSizeArchives.divideToPercent(totalStorageSpace)
                     setLayoutWidth(archivesProgress, archivesPercent, widthMax)
                     archiveDivider.beVisibleIf(archivesPercent != 0)
+
+                    val installPackagesPercent = fileSizeInstallPackages.divideToPercent(totalStorageSpace)
+                    setLayoutWidth(installPackagesProgress, installPackagesPercent, widthMax)
+                    installDivider.beVisibleIf(installPackagesPercent != 0)
 
                     val othersPercent = fileSizeOthers.divideToPercent(totalStorageSpace)
                     setLayoutWidth(othersProgress, othersPercent, widthMax)
@@ -489,6 +503,16 @@ class StorageFragment(
                         toastColor(
                             message = context.getString(R.string.archives) + " " + fileSizeArchives.divideToPercentText(totalStorageSpace),
                             color = context.getColor(R.color.blue_ios))
+                    }
+                    installDivider.setOnClickListener {
+                        toastColor(
+                            message = context.getString(R.string.install_packages) + " " + fileSizeInstallPackages.divideToPercentText(totalStorageSpace),
+                            color = context.getColor(R.color.pink_ios))
+                    }
+                    installPackagesProgress.setOnClickListener {
+                        toastColor(
+                            message = context.getString(R.string.install_packages) + " " + fileSizeInstallPackages.divideToPercentText(totalStorageSpace),
+                            color = context.getColor(R.color.pink_ios))
                     }
                     otherDivider.setOnClickListener {
                         toastColor(

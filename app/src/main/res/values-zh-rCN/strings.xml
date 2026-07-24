@@ -27,7 +27,6 @@
     <string name="compression_successful">压缩成功</string>
     <string name="decompression_successful">解压缩成功</string>
     <string name="view_extracted_files">查看</string>
-    <string name="still_loading_files">仍在加载,这个分类文件比较多,请稍候…</string>
     <string name="compressing_failed">压缩失败</string>
     <string name="decompressing_failed">解压缩失败</string>
     <string name="manage_favorites">管理收藏</string>

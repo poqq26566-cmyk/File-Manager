@@ -81,9 +81,8 @@ class StorageFragment(
                 binding.storageSwipeRefresh.setOnRefreshListener {
                     (activity as? MainActivity)?.openedDirectory()
                     refreshFragment()
-                    getSizes(volumeName)
                     if (volumeName == if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD) getAllAppSize(volumeName)
-                    getVolumeStorageStats(context)
+                    getVolumeStorageStats(context) // already updates the per-category size labels, no need to also call getSizes()
                 }
 
                 if (volumeName == if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD) {
@@ -403,7 +402,16 @@ class StorageFragment(
 
             post {
                 volumes[volumeName]?.apply {
-                    getSizes(volumeName)
+                    // Reuse the filesSize map computed above instead of calling getSizes(volumeName),
+                    // which used to kick off a second, completely redundant full MediaStore scan.
+                    imagesSize.text = fileSizeImages.formatSize()
+                    videosSize.text = fileSizeVideos.formatSize()
+                    audioSize.text = fileSizeAudios.formatSize()
+                    documentsSize.text = fileSizeDocuments.formatSize()
+                    archivesSize.text = fileSizeArchives.formatSize()
+                    installPackagesSize.text = fileSizeInstallPackages.formatSize()
+                    othersSize.text = fileSizeOthers.formatSize()
+
                     totalSpace.text =
                         String.format(context.getString(R.string.storage_used), freeStorageSpace.formatSizeThousand(), totalStorageSpace.formatSizeThousand())
 

@@ -40,6 +40,10 @@ class TrashActivity : SimpleActivity() {
                     confirmEmptyTrash()
                     true
                 }
+                R.id.restore_all -> {
+                    restoreAll()
+                    true
+                }
                 else -> false
             }
         }
@@ -84,6 +88,25 @@ class TrashActivity : SimpleActivity() {
             val success = TrashManager.restore(this, entry)
             runOnUiThread {
                 toast(if (success) R.string.restore_successful else R.string.unknown_error_occurred)
+                loadEntries()
+            }
+        }
+    }
+
+    private fun restoreAll() {
+        if (entries.isEmpty()) {
+            return
+        }
+        ensureBackgroundThread {
+            val snapshot = entries
+            var allSucceeded = true
+            snapshot.forEach { entry ->
+                if (!TrashManager.restore(this, entry)) {
+                    allSucceeded = false
+                }
+            }
+            runOnUiThread {
+                toast(if (allSucceeded) R.string.restore_all_successful else R.string.unknown_error_occurred)
                 loadEntries()
             }
         }

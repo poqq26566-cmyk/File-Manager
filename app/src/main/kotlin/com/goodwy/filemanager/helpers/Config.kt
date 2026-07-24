@@ -48,6 +48,14 @@ class Config(context: Context) : BaseConfig(context) {
         prefs.edit().putLong("cached_size_${volumeName}_$category", size).apply()
     }
 
+    // Recycle bin metadata (see TrashManager). Routed through Config since TrashManager can't
+    // reliably reach the inherited 'prefs' property directly from outside this class.
+    fun getTrashMetadataRaw(): String? = prefs.getString("trash_metadata", null)
+
+    fun saveTrashMetadataRaw(json: String) {
+        prefs.edit().putString("trash_metadata", json).apply()
+    }
+
     fun addFavorite(path: String) {
         val currFavorites = HashSet<String>(favorites)
         currFavorites.add(path)

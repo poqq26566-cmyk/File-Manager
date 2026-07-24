@@ -180,6 +180,19 @@
                         tools:layout_width="8dp" />
 
                     <FrameLayout
+                        android:id="@+id/install_divider"
+                        android:layout_width="2px"
+                        android:layout_height="match_parent"
+                        android:background="@color/hint_black" />
+
+                    <FrameLayout
+                        android:id="@+id/install_packages_progress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:background="@color/pink_ios"
+                        tools:layout_width="8dp" />
+
+                    <FrameLayout
                         android:id="@+id/other_divider"
                         android:layout_width="2px"
                         android:layout_height="match_parent"
@@ -915,7 +928,7 @@
         app:layout_constraintTop_toBottomOf="@+id/archives_holder" />
 
     <RelativeLayout
-        android:id="@+id/others_holder"
+        android:id="@+id/install_packages_holder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/selectableItemBackground"
@@ -924,6 +937,79 @@
         android:paddingEnd="@dimen/normal_margin"
         android:paddingBottom="@dimen/normal_margin"
         app:layout_constraintTop_toBottomOf="@+id/archives_divider">
+
+        <com.goodwy.commons.views.MySquareImageView
+            android:id="@+id/install_packages_image"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:padding="5dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/squircle"
+            android:backgroundTint="@color/pink_ios"
+            android:src="@drawable/ic_android" />
+
+        <com.goodwy.commons.views.MyTextView
+            android:id="@+id/install_packages_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@+id/install_packages_image"
+            android:layout_marginStart="@dimen/normal_margin"
+            android:text="@string/install_packages"
+            android:textSize="@dimen/bigger_text_size" />
+
+        <com.goodwy.commons.views.MyTextView
+            android:id="@+id/install_packages_size"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@+id/install_packages_chevron"
+            android:layout_centerVertical="true"
+            android:alpha="0.6"
+            android:text="…"
+            android:textSize="@dimen/bigger_text_size"
+            tools:text="2 GB" />
+
+        <com.goodwy.commons.views.MySquareImageView
+            android:id="@+id/install_packages_chevron"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:padding="6dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:alpha="0.6"
+            android:src="@drawable/ic_chevron_right_vector" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/install_packages_progressbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/install_packages_label"
+            android:layout_marginTop="@dimen/medium_margin"
+            android:layout_marginBottom="@dimen/medium_margin"
+            android:max="100"
+            android:visibility="gone"
+            app:trackThickness="2dp" />
+    </RelativeLayout>
+
+    <include
+        android:id="@+id/install_packages_divider"
+        layout="@layout/divider"
+        android:layout_width="match_parent"
+        android:layout_height="1px"
+        android:layout_marginHorizontal="22dp"
+        app:layout_constraintTop_toBottomOf="@+id/install_packages_holder" />
+
+    <RelativeLayout
+        android:id="@+id/others_holder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:paddingStart="@dimen/bigger_margin"
+        android:paddingTop="@dimen/normal_margin"
+        android:paddingEnd="@dimen/normal_margin"
+        android:paddingBottom="@dimen/normal_margin"
+        app:layout_constraintTop_toBottomOf="@+id/install_packages_divider">
 
         <com.goodwy.commons.views.MySquareImageView
             android:id="@+id/others_image"
@@ -979,3 +1065,5 @@
             app:trackThickness="2dp" />
     </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+ 

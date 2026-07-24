@@ -11,6 +11,7 @@ import com.goodwy.commons.extensions.beVisible
 import com.goodwy.commons.extensions.beVisibleIf
 import com.goodwy.commons.extensions.formatDate
 import com.goodwy.commons.extensions.formatSize
+import com.goodwy.commons.extensions.getProperTextColor
 import com.goodwy.commons.extensions.getTimeFormat
 import com.goodwy.commons.extensions.toast
 import com.goodwy.commons.extensions.viewBinding
@@ -137,9 +138,13 @@ class TrashActivity : SimpleActivity() {
         override fun onBindViewHolder(holder: TrashViewHolder, position: Int) {
             val entry = entries[position]
             val name = File(entry.originalPath).name
+            val iconColor = getProperTextColor()
             holder.itemBinding.apply {
                 trashItemName.text = name
                 trashItemIcon.setImageResource(if (entry.isDirectory) R.drawable.ic_folder_vector else R.drawable.ic_file_vector)
+                trashItemIcon.setColorFilter(iconColor)
+                trashItemRestore.setColorFilter(iconColor)
+                trashItemDelete.setColorFilter(iconColor)
                 val dateText = entry.deletedAt.formatDate(this@TrashActivity, config.dateFormat, getTimeFormat())
                 trashItemSubtitle.text = "${entry.size.formatSize()} · $dateText"
 

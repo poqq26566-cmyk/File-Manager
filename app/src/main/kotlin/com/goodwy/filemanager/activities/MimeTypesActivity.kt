@@ -6,9 +6,11 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
+import android.content.pm.PackageManager
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.GridLayoutManager
+import com.google.android.material.tabs.TabLayout
 import com.goodwy.commons.dialogs.RadioGroupDialog
 import com.goodwy.commons.extensions.*
 import com.goodwy.commons.helpers.*
@@ -39,6 +41,8 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     private var storedItems = ArrayList<ListItem>()
     private var currentViewType = VIEW_TYPE_LIST
     private var currentVolume = if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
+    private var allInstallItems = ArrayList<ListItem>()
+    private var installTabIndex = 0 // 0 = not installed, 1 = installed
 
     override fun onCreate(savedInstanceState: Bundle?) {
         useChangeAutoTheme = false
@@ -73,6 +77,8 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         ensureBackgroundThread {
             reFetchItems()
         }
+
+        setupInstallTabs()
 
         binding.apply {
             mimetypesFastscroller.updateColors(getProperPrimaryColor())
@@ -408,11 +414,70 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         getProperFileDirItems { fileDirItems ->
             val listItems = getListItemsFromFileDirItems(fileDirItems)
 
-            runOnUiThread {
-                addItems(listItems)
-                if (currentViewType != config.getFolderViewType(currentMimeType)) {
-                    setupLayoutManager()
+            if (currentMimeType == INSTALL_PACKAGES) {
+                allInstallItems = listItems
+                val filtered = filterInstallItems(listItems)
+                runOnUiThread {
+                    addItems(filtered)
+                    if (currentViewType != config.getFolderViewType(currentMimeType)) {
+                        setupLayoutManager()
+                    }
                 }
+            } else {
+                runOnUiThread {
+                    addItems(listItems)
+                    if (currentViewType != config.getFolderViewType(currentMimeType)) {
+                        setupLayoutManager()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun filterInstallItems(items: ArrayList<ListItem>): ArrayList<ListItem> {
+        val wantInstalled = installTabIndex == 1
+        return items.filter { isPackageInstalled(it.path) == wantInstalled } as ArrayList<ListItem>
+    }
+
+    private fun isPackageInstalled(path: String): Boolean {
+        return try {
+            val archiveInfo = packageManager.getPackageArchiveInfo(path, 0) ?: return false
+            packageManager.getPackageInfo(archiveInfo.packageName, 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun setupInstallTabs() {
+        binding.installPackagesTabs.beVisibleIf(currentMimeType == INSTALL_PACKAGES)
+        if (currentMimeType != INSTALL_PACKAGES) {
+            return
+        }
+
+        binding.installPackagesTabs.apply {
+            if (tabCount == 0) {
+                addTab(newTab().setText(R.string.not_installed))
+                addTab(newTab().setText(R.string.installed))
+                setTabTextColors(getProperTextColor(), getProperPrimaryColor())
+                setSelectedTabIndicatorColor(getProperPrimaryColor())
+
+                addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                    override fun onTabSelected(tab: TabLayout.Tab) {
+                        installTabIndex = tab.position
+                        ensureBackgroundThread {
+                            val filtered = filterInstallItems(allInstallItems)
+                            runOnUiThread {
+                                addItems(filtered)
+                            }
+                        }
+                    }
+
+                    override fun onTabUnselected(tab: TabLayout.Tab) {}
+                    override fun onTabReselected(tab: TabLayout.Tab) {}
+                })
             }
         }
     }
@@ -499,3 +564,4 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
     }
 }
+       

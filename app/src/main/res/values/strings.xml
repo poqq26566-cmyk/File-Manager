@@ -31,7 +31,6 @@
     <string name="compression_successful">Compression successful</string>
     <string name="decompression_successful">Decompression successful</string>
     <string name="view_extracted_files">View</string>
-    <string name="still_loading_files">Still loading, this folder has a lot of files…</string>
     <string name="compressing_failed">Compressing failed</string>
     <string name="decompressing_failed">Decompressing failed</string>
 

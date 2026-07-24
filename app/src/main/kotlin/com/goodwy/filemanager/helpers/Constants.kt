@@ -83,6 +83,7 @@ const val QUERY_LIMIT_SMALL_VALUE = 20
 const val QUERY_LIMIT_MEDIUM_VALUE = 50
 const val QUERY_LIMIT_NORMAL_VALUE = 100
 const val QUERY_LIMIT_BIG_VALUE = 200
+const val QUERY_LIMIT_HUGE_VALUE = 300
 
 // what else should we count as an audio except "audio/*" mimetype
 val extraAudioMimeTypes = arrayListOf("application/ogg")

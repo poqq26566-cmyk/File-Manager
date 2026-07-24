@@ -50,6 +50,13 @@
             android:textStyle="italic"
             android:visibility="gone" />
 
+        <ProgressBar
+            android:id="@+id/mimetypes_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:visibility="gone" />
+
         <com.goodwy.commons.views.MyTextView
             android:id="@+id/mimetypes_placeholder_2"
             android:layout_width="wrap_content"

@@ -17,6 +17,7 @@ import com.goodwy.filemanager.R
 import com.goodwy.filemanager.databinding.ActivitySettingsBinding
 import com.goodwy.filemanager.dialogs.ManageVisibleTabsDialog
 import com.goodwy.filemanager.dialogs.getDefaultOpenAppLabel
+import com.goodwy.filemanager.dialogs.prefetchInstalledAppsCache
 import com.goodwy.filemanager.dialogs.showAppPickerForCategory
 import com.goodwy.filemanager.dialogs.showManageOpenAppsFilterDialog
 import com.goodwy.filemanager.extensions.config
@@ -83,6 +84,7 @@ class SettingsActivity : SimpleActivity() {
         setupFloatingButtonStyle()
 
         setupDefaultOpenApps()
+        prefetchInstalledAppsCache()
 
         setupDefaultFolder()
         setupManageFavorites()

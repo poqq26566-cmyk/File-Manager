@@ -26,6 +26,13 @@ class GestureEditText : AppCompatEditText, GestureView {
     private var origSize = 0f
     private var size = 0f
 
+    // when this view's own width is content-driven (e.g. wrapped in a HorizontalScrollView with
+    // layout_width="wrap_content" so long lines can scroll instead of wrapping), syncing the
+    // gesture controller's viewport/image to the view's own onSizeChanged bounds creates a
+    // feedback loop: text size -> desired width -> onSizeChanged -> controller state -> text size.
+    // Disable the sync in that case; pinch-zoom simply isn't supported alongside horizontal scroll.
+    var isZoomSyncEnabled = true
+
     init {
         controller.settings.setOverzoomFactor(1f).isPanEnabled = false
         controller.addOnStateChangeListener(object : GestureController.OnStateChangeListener {
@@ -45,8 +52,10 @@ class GestureEditText : AppCompatEditText, GestureView {
         val storedTextZoom = context.config.editorTextZoom
         if (storedTextZoom != 0f) {
             onGlobalLayout {
-                controller.state.zoomTo(storedTextZoom, width / 2f, height / 2f)
-                controller.updateState()
+                if (isZoomSyncEnabled) {
+                    controller.state.zoomTo(storedTextZoom, width / 2f, height / 2f)
+                    controller.updateState()
+                }
             }
         }
     }
@@ -54,7 +63,9 @@ class GestureEditText : AppCompatEditText, GestureView {
     override fun getController() = controller
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        controller.onTouch(this, event)
+        if (isZoomSyncEnabled) {
+            controller.onTouch(this, event)
+        }
         return super.onTouchEvent(event)
     }
 
@@ -72,8 +83,10 @@ class GestureEditText : AppCompatEditText, GestureView {
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
-        controller.settings.setViewport(width, height).setImage(width, height)
-        controller.updateState()
+        if (isZoomSyncEnabled) {
+            controller.settings.setViewport(width, height).setImage(width, height)
+            controller.updateState()
+        }
     }
 
     private fun applyState(state: State) {

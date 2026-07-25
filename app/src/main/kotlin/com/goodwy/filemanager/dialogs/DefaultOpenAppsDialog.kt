@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import com.goodwy.commons.dialogs.RadioGroupDialog
 import com.goodwy.commons.extensions.getAlertDialogBuilder
 import com.goodwy.commons.extensions.toast
+import com.goodwy.commons.helpers.ensureBackgroundThread
 import com.goodwy.commons.models.RadioItem
 import com.goodwy.filemanager.R
 import com.goodwy.filemanager.activities.SettingsActivity
@@ -15,6 +16,11 @@ import com.goodwy.filemanager.helpers.OpenAppCategory
 // own "default app"). This intentionally does NOT filter by mime-type support or by whether the
 // app has a launcher icon — some apps (e.g. certain media players/plugins) don't register in
 // ways those narrower queries pick up, so we enumerate every installed application directly.
+//
+// This walks every installed package and loads each one's label individually, which can take
+// a noticeable moment on a phone with a lot of apps installed — always call this off the main
+// thread (see showAppPickerForCategory / showManageOpenAppsFilterDialog below), never directly
+// from a click listener, or it can block the UI thread long enough to trigger an ANR.
 private fun SettingsActivity.getAllInstalledApps(): List<Pair<String, String>> {
     val pm = packageManager
     return try {
@@ -50,7 +56,8 @@ private fun SettingsActivity.getCandidateApps(category: OpenAppCategory): List<P
 
 // Returns the display name to show for a category's row in Settings — either the currently
 // chosen app's label, or "not set" if none is chosen (or the previously chosen app got
-// uninstalled since).
+// uninstalled since). Only reads the one already-stored package's label, not the full app list,
+// so this is cheap enough to call directly on the main thread.
 fun SettingsActivity.getDefaultOpenAppLabel(category: OpenAppCategory): String {
     val pkg = config.getDefaultOpenApp(category.key)
     if (pkg.isEmpty()) {
@@ -67,26 +74,38 @@ fun SettingsActivity.getDefaultOpenAppLabel(category: OpenAppCategory): String {
 // Opens the app-picker for one category (e.g. tapping the "PDF 文档" row): lists the candidate
 // apps (see getCandidateApps above), lets the user pick one (or "ask every time" to clear the
 // preference), and saves the choice — scoped to this app only.
+//
+// Building that candidate list walks every installed app, which can take a moment — done on a
+// background thread so tapping the row doesn't freeze the UI, with the dialog itself shown back
+// on the main thread once the list is ready.
 fun SettingsActivity.showAppPickerForCategory(category: OpenAppCategory, onSaved: () -> Unit) {
-    val candidates = getCandidateApps(category)
-    if (candidates.isEmpty()) {
-        toast(com.goodwy.commons.R.string.no_app_found)
-        return
-    }
+    ensureBackgroundThread {
+        val candidates = getCandidateApps(category)
+        runOnUiThread {
+            if (isDestroyed || isFinishing) {
+                return@runOnUiThread
+            }
 
-    val currentPkg = config.getDefaultOpenApp(category.key)
+            if (candidates.isEmpty()) {
+                toast(com.goodwy.commons.R.string.no_app_found)
+                return@runOnUiThread
+            }
 
-    val items = ArrayList<RadioItem>()
-    items.add(RadioItem(0, getString(R.string.default_open_app_ask_everytime), ""))
-    candidates.forEachIndexed { index, (pkg, label) ->
-        items.add(RadioItem(index + 1, label, pkg))
-    }
+            val currentPkg = config.getDefaultOpenApp(category.key)
 
-    val checkedId = items.indexOfFirst { it.value == currentPkg }.let { if (it == -1) 0 else it }
+            val items = ArrayList<RadioItem>()
+            items.add(RadioItem(0, getString(R.string.default_open_app_ask_everytime), ""))
+            candidates.forEachIndexed { index, (pkg, label) ->
+                items.add(RadioItem(index + 1, label, pkg))
+            }
 
-    RadioGroupDialog(this, items, checkedId, R.string.default_open_apps) { newValue ->
-        config.setDefaultOpenApp(category.key, newValue as String)
-        onSaved()
+            val checkedId = items.indexOfFirst { it.value == currentPkg }.let { if (it == -1) 0 else it }
+
+            RadioGroupDialog(this, items, checkedId, R.string.default_open_apps) { newValue ->
+                config.setDefaultOpenApp(category.key, newValue as String)
+                onSaved()
+            }
+        }
     }
 }
 
@@ -94,28 +113,38 @@ fun SettingsActivity.showAppPickerForCategory(category: OpenAppCategory, onSaved
 // category pickers above — narrows a long "every installed app" list down to just the handful
 // they actually use, so finding the right one later is quick. Checking nothing at all is treated
 // the same as "no filter set up" (i.e. shows everything again), rather than an empty picker.
+//
+// Same background-thread treatment as showAppPickerForCategory above, for the same reason.
 fun SettingsActivity.showManageOpenAppsFilterDialog() {
-    val allApps = getAllInstalledApps()
-    if (allApps.isEmpty()) {
-        toast(com.goodwy.commons.R.string.no_app_found)
-        return
+    ensureBackgroundThread {
+        val allApps = getAllInstalledApps()
+        runOnUiThread {
+            if (isDestroyed || isFinishing) {
+                return@runOnUiThread
+            }
+
+            if (allApps.isEmpty()) {
+                toast(com.goodwy.commons.R.string.no_app_found)
+                return@runOnUiThread
+            }
+
+            val currentFilter = config.defaultOpenAppsFilter
+            val checkedItems = BooleanArray(allApps.size) { currentFilter.contains(allApps[it].first) }
+            val labels = allApps.map { it.second }.toTypedArray()
+
+            getAlertDialogBuilder()
+                .setTitle(R.string.filter_open_apps)
+                .setMultiChoiceItems(labels, checkedItems) { _, which, isChecked ->
+                    checkedItems[which] = isChecked
+                }
+                .setPositiveButton(com.goodwy.commons.R.string.ok) { _, _ ->
+                    val newFilter = allApps.filterIndexed { index, _ -> checkedItems[index] }
+                        .map { it.first }
+                        .toHashSet()
+                    config.defaultOpenAppsFilter = newFilter
+                }
+                .setNegativeButton(com.goodwy.commons.R.string.cancel, null)
+                .show()
+        }
     }
-
-    val currentFilter = config.defaultOpenAppsFilter
-    val checkedItems = BooleanArray(allApps.size) { currentFilter.contains(allApps[it].first) }
-    val labels = allApps.map { it.second }.toTypedArray()
-
-    getAlertDialogBuilder()
-        .setTitle(R.string.filter_open_apps)
-        .setMultiChoiceItems(labels, checkedItems) { _, which, isChecked ->
-            checkedItems[which] = isChecked
-        }
-        .setPositiveButton(com.goodwy.commons.R.string.ok) { _, _ ->
-            val newFilter = allApps.filterIndexed { index, _ -> checkedItems[index] }
-                .map { it.first }
-                .toHashSet()
-            config.defaultOpenAppsFilter = newFilter
-        }
-        .setNegativeButton(com.goodwy.commons.R.string.cancel, null)
-        .show()
 }

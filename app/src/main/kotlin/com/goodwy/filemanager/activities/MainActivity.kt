@@ -251,7 +251,7 @@ class MainActivity : SimpleActivity() {
         binding.mainViewPager.setPageTransformer(true, animation)
         binding.mainViewPager.setPagingEnabled(!config.useSwipeToAction)
 
-        if (mHasStoragePermission) newAppRecommendation()
+        
     }
 
     override fun onPause() {

@@ -87,6 +87,12 @@ class ReadTextActivity : SimpleActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
 
+        if (isSearchActive) {
+            closeSearch()
+        }
+        searchIndex = 0
+        searchMatches = emptyList()
+
         // the system can hand an already-running instance of this activity a fresh intent
         // instead of creating a new one (e.g. reopening the same file from outside the app
         // while this screen is still alive in the background task) — without this, the editor
@@ -98,15 +104,15 @@ class ReadTextActivity : SimpleActivity() {
                 if (it) {
                     saveText(false)
                 } else {
-                    loadFileFromIntent(null)
+                    loadFileFromIntent(null, waitForLayout = false)
                 }
             }
         } else {
-            loadFileFromIntent(null)
+            loadFileFromIntent(null, waitForLayout = false)
         }
     }
 
-    private fun loadFileFromIntent(savedInstanceState: Bundle?) {
+    private fun loadFileFromIntent(savedInstanceState: Bundle?, waitForLayout: Boolean = true) {
         val uri = if (intent.extras?.containsKey(REAL_FILE_PATH) == true) {
             Uri.fromFile(File(intent.extras?.get(REAL_FILE_PATH).toString()))
         } else {
@@ -123,7 +129,25 @@ class ReadTextActivity : SimpleActivity() {
             binding.readTextToolbar.title = Uri.decode(filename)
         }
 
-        binding.readTextView.onGlobalLayout {
+        if (waitForLayout) {
+            binding.readTextView.onGlobalLayout {
+                ensureBackgroundThread {
+                    checkIntent(uri, savedInstanceState)
+                }
+            }
+        } else {
+            // Reached from onNewIntent(), where the activity instance is being reused for a
+            // freshly opened file instead of being recreated. The view has already been through
+            // its initial layout pass at this point, so onGlobalLayout() may never fire again
+            // (nothing about the view's size/position necessarily changes), which would leave
+            // checkIntent() — and therefore the actual file load — never called, silently
+            // stuck showing the previous file's content. Load immediately instead of waiting.
+            //
+            // Also reset filePath: for a content:// uri it's only populated lazily (via
+            // updateFilePath(), e.g. when Save is pressed) and otherwise left as-is, so without
+            // clearing it here a leftover path from the previous file could cause Save to
+            // silently overwrite the wrong file.
+            filePath = ""
             ensureBackgroundThread {
                 checkIntent(uri, savedInstanceState)
             }

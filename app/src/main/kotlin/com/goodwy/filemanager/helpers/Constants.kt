@@ -11,6 +11,20 @@ import com.goodwy.filemanager.models.ListItem
 const val MAX_COLUMN_COUNT = 15
 const val EXTRA_OPEN_PATH = "extra_open_path"
 
+// Per-mimetype-category "default app" preference. This is scoped to this app only — picking
+// an app here does NOT touch Android's system-wide default-app settings, it only controls what
+// happens when a file of that category is opened from within this file manager.
+const val PREFIX_DEFAULT_OPEN_APP = "default_open_app_"
+
+const val OPEN_CATEGORY_TEXT = "text"
+const val OPEN_CATEGORY_IMAGE = "image"
+const val OPEN_CATEGORY_AUDIO = "audio"
+const val OPEN_CATEGORY_VIDEO = "video"
+const val OPEN_CATEGORY_PDF = "pdf"
+const val OPEN_CATEGORY_WORD = "word"
+const val OPEN_CATEGORY_EXCEL = "excel"
+const val OPEN_CATEGORY_PPT = "ppt"
+
 // shared preferences
 const val SHOW_HIDDEN = "show_hidden"
 const val PRESS_BACK_TWICE = "press_back_twice"

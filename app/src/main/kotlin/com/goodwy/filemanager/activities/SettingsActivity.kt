@@ -130,17 +130,18 @@ class SettingsActivity : SimpleActivity() {
 
         binding.apply {
             arrayOf(
-                settingsAppearanceLabel,
-                settingsGeneralLabel,
-                settingsTabsLabel,
-                settingsSwipeGesturesLabel,
-                settingsFileOperationsLabel,
-                settingsSecurityLabel,
-                settingsTopAppBarLabel,
-                settingsListViewLabel,
-                settingsOtherLabel
+                settingsDefaultOpenAppsHolder,
+                settingsColorCustomizationHolder,
+                settingsGeneralHolder,
+                settingsTabsHolder,
+                settingsSwipeGesturesHolder,
+                settingsFileOperationsHolder,
+                settingsSecurityHolder,
+                settingsTopAppBarHolder,
+                settingsListViewHolder,
+                settingsOtherHolder
             ).forEach {
-                it.setTextColor(getProperPrimaryColor())
+                it.setCardBackgroundColor(getSurfaceColor())
             }
         }
 

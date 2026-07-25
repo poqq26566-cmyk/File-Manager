@@ -39,6 +39,7 @@ import com.goodwy.filemanager.adapters.ItemsAdapter
 import com.goodwy.filemanager.databinding.ItemStorageVolumeBinding
 import com.goodwy.filemanager.databinding.StorageFragmentBinding
 import com.goodwy.filemanager.extensions.config
+import com.goodwy.filemanager.extensions.isPathInExcludedFolder
 import com.goodwy.filemanager.extensions.formatSizeThousand
 import com.goodwy.filemanager.extensions.getAllVolumeNames
 import com.goodwy.filemanager.helpers.*
@@ -533,14 +534,31 @@ class StorageFragment(
                         return@queryCursor
                     }
 
+                    // Same exclusion the browsable lists apply, so encrypted-volume contents don't
+                    // inflate the counts here while being absent when the user taps into a category.
+                    val rowPath = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
+                    if (rowPath != null && rowPath.isPathInExcludedFolder()) {
+                        return@queryCursor
+                    }
+
                     val mimeType =
                         cursor.getStringValue(MediaStore.Files.FileColumns.MIME_TYPE)?.lowercase(Locale.getDefault())
                     if (mimeType == null) {
                         if (size != 4096L) {
                             val path = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
                             if (!context.getIsPathDirectory(path)) {
-                                othersSize += size
-                                othersCount++
+                                // Source files (.kt/.py/.md/...) normally have no MIME type at all,
+                                // so extension is the only signal available to keep them out of
+                                // Others — must match MimeTypesActivity's rule or the count here
+                                // and the browsable list would disagree.
+                                val ext = path?.substringAfterLast('.', "")?.lowercase(Locale.getDefault())
+                                if (documentExtensions.contains(ext)) {
+                                    documentsSize += size
+                                    documentsCount++
+                                } else {
+                                    othersSize += size
+                                    othersCount++
+                                }
                             }
                         }
                         return@queryCursor
@@ -587,6 +605,9 @@ class StorageFragment(
                                         if (archiveExtensions.contains(ext)) {
                                             archivesSize += size
                                             archivesCount++
+                                        } else if (documentExtensions.contains(ext)) {
+                                            documentsSize += size
+                                            documentsCount++
                                         } else {
                                             othersSize += size
                                             othersCount++
@@ -597,8 +618,15 @@ class StorageFragment(
                                     }
                                 }
                                 else -> {
-                                    othersSize += size
-                                    othersCount++
+                                    val path = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
+                                    val ext = path?.substringAfterLast('.', "")?.lowercase(Locale.getDefault())
+                                    if (documentExtensions.contains(ext)) {
+                                        documentsSize += size
+                                        documentsCount++
+                                    } else {
+                                        othersSize += size
+                                        othersCount++
+                                    }
                                 }
                             }
                         }

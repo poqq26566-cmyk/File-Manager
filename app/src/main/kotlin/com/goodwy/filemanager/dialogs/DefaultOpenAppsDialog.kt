@@ -10,14 +10,16 @@ import com.goodwy.filemanager.activities.SettingsActivity
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.helpers.OpenAppCategory
 
-// Returns the installed apps that can handle the given category's mime type, as (packageName,
-// label) pairs, sorted by label. Excludes this app itself (it wouldn't make sense to route a
-// file back to our own file manager as its own "default app").
+// Returns every installed, user-launchable app as (packageName, label) pairs, sorted by label.
+// Excludes this app itself (it wouldn't make sense to route a file back to our own file
+// manager as its own "default app"). We deliberately don't filter by mime-type support here —
+// some apps declare their intent-filters in ways a strict mime-type query misses, so showing
+// the full app list lets the user pick freely instead of silently hiding valid options.
 private fun SettingsActivity.getCandidateApps(category: OpenAppCategory): List<Pair<String, String>> {
     val pm = packageManager
-    val intent = Intent(Intent.ACTION_VIEW).apply { type = category.queryMimeType }
+    val launcherIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
     return try {
-        pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        pm.queryIntentActivities(launcherIntent, PackageManager.MATCH_DEFAULT_ONLY)
             .asSequence()
             .map { it.activityInfo.packageName }
             .filter { it != packageName }
@@ -36,7 +38,6 @@ private fun SettingsActivity.getCandidateApps(category: OpenAppCategory): List<P
         emptyList()
     }
 }
-
 // Returns the display name to show for a category's row in Settings — either the currently
 // chosen app's label, or "not set" if none is chosen (or the previously chosen app got
 // uninstalled since).

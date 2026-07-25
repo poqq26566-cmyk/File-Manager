@@ -67,4 +67,17 @@
     <string name="total_storage">总存储：%s</string>
     <string name="enable_root_access">启用 root 访问</string>
     <string name="press_back_twice">需要按两次返回键才能离开应用</string>
+
+    <!-- 默认打开方式（仅在本应用内生效，不修改系统默认应用） -->
+    <string name="default_open_apps">默认打开方式</string>
+    <string name="default_open_app_not_set">未设置（每次询问）</string>
+    <string name="default_open_app_ask_everytime">每次询问</string>
+    <string name="category_text">文本文档</string>
+    <string name="category_image">图片</string>
+    <string name="category_audio">音乐</string>
+    <string name="category_video">视频</string>
+    <string name="category_pdf">PDF 文档</string>
+    <string name="category_word">Word 文档</string>
+    <string name="category_excel">Excel 工作表</string>
+    <string name="category_ppt">PPT 演示文稿</string>
 </resources>

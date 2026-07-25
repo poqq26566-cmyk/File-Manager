@@ -219,6 +219,25 @@
                             android:layout_marginEnd="@dimen/settings_margin"
                             tools:text="@string/default_open_app_not_set" />
                     </RelativeLayout>
+
+                    <RelativeLayout
+                        android:id="@+id/settings_filter_open_apps_holder"
+                        style="@style/SettingsHolderStyle">
+
+                        <com.goodwy.commons.views.MyTextView
+                            android:id="@+id/settings_filter_open_apps_label"
+                            style="@style/SettingsTextLabelStyle"
+                            android:layout_centerVertical="true"
+                            android:layout_marginEnd="68dp"
+                            android:text="@string/filter_open_apps" />
+
+                        <ImageView
+                            android:id="@+id/settings_filter_open_apps_chevron"
+                            style="@style/SettingsChevronStyle"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:contentDescription="@string/filter_open_apps"/>
+                    </RelativeLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

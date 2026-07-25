@@ -173,10 +173,18 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
     }
 
     override fun deleteFiles(files: ArrayList<FileDirItem>) {
-        deleteFiles(files, false) {
-            if (!it) {
-                runOnUiThread {
-                    toast(R.string.unknown_error_occurred)
+        // Move to the recycle bin first (off the main thread, since it involves real file I/O),
+        // then run the normal delete flow — matching the behavior of the Files / Recent files
+        // screens, so items deleted from a Documents/etc. category also land in Trash.
+        ensureBackgroundThread {
+            files.forEach { TrashManager.moveToTrash(this, it) }
+            runOnUiThread {
+                deleteFiles(files, false) {
+                    if (!it) {
+                        runOnUiThread {
+                            toast(R.string.unknown_error_occurred)
+                        }
+                    }
                 }
             }
         }

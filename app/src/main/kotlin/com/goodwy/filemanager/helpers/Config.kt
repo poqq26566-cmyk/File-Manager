@@ -48,6 +48,15 @@ class Config(context: Context) : BaseConfig(context) {
         prefs.edit().putLong("cached_size_${volumeName}_$category", size).apply()
     }
 
+    // Same idea as the size cache above, but for the file count shown next to each category
+    // label (e.g. "Documents (1643)") so that number is also available immediately on open.
+    fun getCachedCategoryCount(volumeName: String, category: String): Int =
+        prefs.getInt("cached_count_${volumeName}_$category", -1)
+
+    fun saveCachedCategoryCount(volumeName: String, category: String, count: Int) {
+        prefs.edit().putInt("cached_count_${volumeName}_$category", count).apply()
+    }
+
     // Recycle bin metadata (see TrashManager). Routed through Config since TrashManager can't
     // reliably reach the inherited 'prefs' property directly from outside this class.
     fun getTrashMetadataRaw(): String? = prefs.getString("trash_metadata", null)

@@ -7,9 +7,13 @@ import androidx.core.content.FileProvider
 import com.goodwy.commons.activities.BaseSimpleActivity
 import com.goodwy.commons.dialogs.NewAppDialog
 import com.goodwy.commons.extensions.getFilenameFromPath
+import com.goodwy.commons.extensions.getFinalUriFromPath
+import com.goodwy.commons.extensions.getMimeType
 import com.goodwy.commons.extensions.getMimeTypeFromUri
 import com.goodwy.commons.extensions.getParentPath
+import com.goodwy.commons.extensions.getUriMimeType
 import com.goodwy.commons.extensions.isNewApp
+import com.goodwy.commons.extensions.isPackageInstalled
 import com.goodwy.commons.extensions.launchActivityIntent
 import com.goodwy.commons.extensions.openPathIntent
 import com.goodwy.commons.extensions.renameFile
@@ -30,6 +34,7 @@ import com.goodwy.filemanager.helpers.OPEN_AS_DEFAULT
 import com.goodwy.filemanager.helpers.OPEN_AS_IMAGE
 import com.goodwy.filemanager.helpers.OPEN_AS_TEXT
 import com.goodwy.filemanager.helpers.OPEN_AS_VIDEO
+import com.goodwy.filemanager.helpers.mimeTypeToOpenCategory
 import java.io.File
 
 fun Activity.sharePaths(paths: ArrayList<String>) {
@@ -58,7 +63,31 @@ fun Activity.tryOpenPathIntent(path: String, forceChooser: Boolean, openAsType: 
 }
 
 fun Activity.openPath(path: String, forceChooser: Boolean, openAsType: Int = OPEN_AS_DEFAULT) {
-    openPathIntent(path, forceChooser, BuildConfig.APPLICATION_ID, getMimeType(openAsType))
+    val forcedMimeType = getMimeType(openAsType)
+    val detectedMimeType = forcedMimeType.ifEmpty { path.getMimeType() }
+    val category = mimeTypeToOpenCategory(detectedMimeType)
+    val preferredPackage = category?.let { config.getDefaultOpenApp(it) }
+
+    if (!forceChooser && !preferredPackage.isNullOrEmpty() && isPackageInstalled(preferredPackage)) {
+        val newUri = getFinalUriFromPath(path, BuildConfig.APPLICATION_ID)
+        if (newUri != null) {
+            try {
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(newUri, forcedMimeType.ifEmpty { getUriMimeType(path, newUri) })
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    setPackage(preferredPackage)
+                    startActivity(this)
+                }
+                return
+            } catch (e: Exception) {
+                // the previously-chosen app may have lost the ability to handle this exact
+                // file (or got uninstalled since isPackageInstalled() was checked) — fall
+                // through to the normal chooser flow below instead of leaving the user stuck
+            }
+        }
+    }
+
+    openPathIntent(path, forceChooser, BuildConfig.APPLICATION_ID, forcedMimeType)
 }
 
 private fun getMimeType(type: Int) = when (type) {

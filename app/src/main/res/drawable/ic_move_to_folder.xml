@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_folder_vector" />
+    <item
+        android:width="11dp"
+        android:height="11dp"
+        android:gravity="bottom|end">
+        <shape android:shape="oval">
+            <solid android:color="#1976D2" />
+        </shape>
+    </item>
+    <item
+        android:width="8dp"
+        android:height="8dp"
+        android:gravity="bottom|end"
+        android:bottom="1dp"
+        android:right="1dp"
+        android:drawable="@drawable/ic_arrow_right_vector" />
+</layer-list>

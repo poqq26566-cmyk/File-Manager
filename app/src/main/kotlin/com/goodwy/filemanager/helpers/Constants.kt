@@ -95,13 +95,13 @@ val extraDocumentMimeTypes = arrayListOf(
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/javascript",
+    "application/json",
     "application/vnd.ms-excel"
 )
 
 val archiveMimeTypes = arrayListOf(
     "application/zip",
     "application/octet-stream",
-    "application/json",
     "application/x-tar",
     "application/x-rar-compressed",
     "application/x-zip-compressed",

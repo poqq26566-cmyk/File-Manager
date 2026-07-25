@@ -40,9 +40,9 @@ rootshell = { module = "com.github.naveensingh:RootShell", version.ref = "rootsh
 roottools = { module = "com.github.naveensingh:RootTools", version.ref = "roottools" }
 zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
 #Goodwy
-goodwy-commons-gplay = { module = "com.github.goodwy.goodwy-commons:commons-gplay", version.ref = "right-commons" }
-goodwy-commons-foss = { module = "com.github.goodwy.goodwy-commons:commons-foss", version.ref = "right-commons" }
-goodwy-commons-rustore = { module = "com.github.goodwy.goodwy-commons:commons-rustore", version.ref = "right-commons" }
+goodwy-commons-gplay = { module = "com.github.poqq26566-cmyk.goodwy-commons:commons-gplay", version.ref = "right-commons" }
+goodwy-commons-foss = { module = "com.github.poqq26566-cmyk.goodwy-commons:commons-foss", version.ref = "right-commons" }
+goodwy-commons-rustore = { module = "com.github.poqq26566-cmyk.goodwy-commons:commons-rustore", version.ref = "right-commons" }
 rx-animation = { module = "com.mikhaellopez:rxanimation", version.ref = "rxAnimation" }
 rx-java = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxJava3" }
 swipe-action = { module = "com.github.Goodwy:SwipeActionView", version.ref = "swipeToActionLayout" }

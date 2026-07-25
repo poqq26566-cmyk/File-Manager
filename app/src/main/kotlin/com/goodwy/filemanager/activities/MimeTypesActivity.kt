@@ -1,6 +1,7 @@
 package com.goodwy.filemanager.activities
 
 import android.app.SearchManager
+import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
@@ -24,6 +25,7 @@ import com.goodwy.filemanager.databinding.ActivityMimetypesBinding
 import com.goodwy.filemanager.dialogs.ChangeSortingDialog
 import com.goodwy.filemanager.dialogs.ChangeViewTypeDialog
 import com.goodwy.filemanager.extensions.config
+import com.goodwy.filemanager.extensions.isPathInExcludedFolder
 import com.goodwy.filemanager.extensions.isPathInHiddenFolder
 import com.goodwy.filemanager.extensions.tryOpenPathIntent
 import com.goodwy.filemanager.helpers.*
@@ -475,23 +477,26 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         val (selection, selectionArgs) = buildMimeTypeSelection()
 
         try {
-            // NOTE: originally this used the official Bundle query args (ContentResolver.QUERY_ARG_*)
-            // for the limited fast-paint pass, since that's Google's documented way to do it on
-            // API 26+. In practice, on complex multi-condition WHERE clauses like Others' (a chain
-            // of NOT LIKE / NOT IN / NOT (...) checks), some MediaProvider implementations silently
-            // fail to apply the Bundle selection correctly and return far fewer rows than actually
-            // match — observed as an Others category reporting thousands of files on the Storage
-            // tab but showing just one when browsed. Falling back to the old-style 5-arg query with
-            // "LIMIT n" appended to the sort order string sidesteps that: it's the exact same query
-            // path (selection, args) used everywhere else in the app (including the Storage tab's
-            // count, which doesn't have this problem), just with a LIMIT clause tacked onto the end
-            // of the ORDER BY string — a long-standing, reliable trick MediaStore has always honored.
-            val sortOrder = if (limit != null) {
-                "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT $limit"
+            // The limited fast-paint pass MUST go through the Bundle query args (API 26+). Appending
+            // "LIMIT n" to the sort-order string is the classic SQLite trick, but MediaProvider on
+            // Android 11+ parses that string and rejects it outright with
+            // "IllegalArgumentException: Invalid token LIMIT", which kills the query for every
+            // category, not just the big ones.
+            //
+            // Note the limited result is treated as a preview only — reFetchItems always follows up
+            // with the full unlimited query below, precisely because we can't assume a short result
+            // here means "that's all of them".
+            val cursor = if (limit != null) {
+                val queryArgs = android.os.Bundle().apply {
+                    putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                    putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+                    putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
+                    putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+                }
+                contentResolver.query(uri, projection, queryArgs, null)
             } else {
-                null
+                contentResolver.query(uri, projection, selection, selectionArgs, null)
             }
-            val cursor = contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
             cursor?.use {
                 while (it.moveToNext()) {
                     // Bail out as soon as the screen is gone (e.g. user pressed back) instead of
@@ -512,6 +517,12 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
 
                         val isHiddenFile = name.startsWith(".")
                         if (!showHidden && (isHiddenFile || path.isPathInHiddenFolder())) {
+                            continue
+                        }
+
+                        // Skipped regardless of the show-hidden setting: these aren't hidden files,
+                        // they're encrypted-volume internals that are never meaningful to browse.
+                        if (path.isPathInExcludedFolder()) {
                             continue
                         }
 
@@ -680,15 +691,13 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                 addItems(partialListItems)
             }
 
-            // Fewer rows than the limit means the provider already handed back every matching
-            // row — that partial list IS the complete result, no need to re-run the full scan.
-            if (partialFileDirItems.size < INITIAL_LOAD_LIMIT) {
-                stillLoadingHandler.removeCallbacks(stillLoadingRunnable)
-                itemsCache[cacheKey] = partialListItems
-                runOnUiThread { isFetching = false }
-            } else {
-                runFullQuery()
-            }
+            // Always follow up with the full unlimited query, even when the preview came back with
+            // fewer rows than the limit. It's tempting to treat a short preview as "that's all of
+            // them" and skip the second pass, but a limited query can under-return for reasons that
+            // have nothing to do with how many rows actually match (provider quirks on complex
+            // WHERE clauses, for one) — and when that happened the category silently showed a
+            // fraction of its files while the Storage tab counted them all.
+            runFullQuery()
         }
     }
 

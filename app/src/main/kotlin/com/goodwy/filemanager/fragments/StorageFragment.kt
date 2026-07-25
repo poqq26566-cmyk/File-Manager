@@ -404,7 +404,22 @@ class StorageFragment(
                                 extraDocumentMimeTypes.contains(mimeType) -> documentsSize += size
                                 extraAudioMimeTypes.contains(mimeType) -> audioSize += size
                                 installPackageMimeTypes.contains(mimeType) -> installPackagesSize += size
-                                archiveMimeTypes.contains(mimeType) -> archivesSize += size
+                                archiveMimeTypes.contains(mimeType) -> {
+                                    // application/octet-stream is a generic fallback MIME type — only
+                                    // count it as an archive if the filename actually looks like one,
+                                    // matching the same check used when browsing the Archives category.
+                                    if (mimeType == "application/octet-stream") {
+                                        val path = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
+                                        val ext = path?.substringAfterLast('.', "")?.lowercase(Locale.getDefault())
+                                        if (archiveExtensions.contains(ext)) {
+                                            archivesSize += size
+                                        } else {
+                                            othersSize += size
+                                        }
+                                    } else {
+                                        archivesSize += size
+                                    }
+                                }
                                 else -> othersSize += size
                             }
                         }

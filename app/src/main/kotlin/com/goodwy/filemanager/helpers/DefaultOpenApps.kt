@@ -1,39 +1,82 @@
-package com.goodwy.filemanager.helpers
+package com.goodwy.filemanager.dialogs
 
+import android.content.pm.PackageManager
+import com.goodwy.commons.dialogs.RadioGroupDialog
+import com.goodwy.commons.extensions.toast
+import com.goodwy.commons.models.RadioItem
 import com.goodwy.filemanager.R
+import com.goodwy.filemanager.activities.SettingsActivity
+import com.goodwy.filemanager.extensions.config
+import com.goodwy.filemanager.helpers.OpenAppCategory
 
-// One entry per row shown in Settings > "默认打开方式" (Default open apps).
-// `queryMimeType` is what we use to ask the system which installed apps can handle this
-// category, when building the app-picker list for that row.
-data class OpenAppCategory(val key: String, val labelRes: Int, val queryMimeType: String)
+// Returns every installed app package as (packageName, label) pairs, sorted by label. Excludes
+// this app itself (it wouldn't make sense to route a file back to our own file manager as its
+// own "default app"). This intentionally does NOT filter by mime-type support or by whether the
+// app has a launcher icon — some apps (e.g. certain media players/plugins) don't register in
+// ways those narrower queries pick up, so we enumerate every installed application directly and
+// let the user pick freely instead of silently hiding valid options.
+private fun SettingsActivity.getCandidateApps(category: OpenAppCategory): List<Pair<String, String>> {
+    val pm = packageManager
+    return try {
+        @Suppress("DEPRECATION")
+        pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            .asSequence()
+            .map { it.packageName }
+            .filter { it != packageName }
+            .distinct()
+            .mapNotNull { pkg ->
+                try {
+                    val label = pm.getApplicationInfo(pkg, 0).loadLabel(pm).toString()
+                    pkg to label
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            .sortedBy { it.second.lowercase() }
+            .toList()
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
 
-fun defaultOpenAppCategories(): List<OpenAppCategory> = listOf(
-    OpenAppCategory(OPEN_CATEGORY_TEXT, R.string.category_text, "text/plain"),
-    OpenAppCategory(OPEN_CATEGORY_IMAGE, R.string.category_image, "image/*"),
-    OpenAppCategory(OPEN_CATEGORY_AUDIO, R.string.category_audio, "audio/*"),
-    OpenAppCategory(OPEN_CATEGORY_VIDEO, R.string.category_video, "video/*"),
-    OpenAppCategory(OPEN_CATEGORY_PDF, R.string.category_pdf, "application/pdf"),
-    OpenAppCategory(OPEN_CATEGORY_WORD, R.string.category_word, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-    OpenAppCategory(OPEN_CATEGORY_EXCEL, R.string.category_excel, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-    OpenAppCategory(OPEN_CATEGORY_PPT, R.string.category_ppt, "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
-)
+// Returns the display name to show for a category's row in Settings — either the currently
+// chosen app's label, or "not set" if none is chosen (or the previously chosen app got
+// uninstalled since).
+fun SettingsActivity.getDefaultOpenAppLabel(category: OpenAppCategory): String {
+    val pkg = config.getDefaultOpenApp(category.key)
+    if (pkg.isEmpty()) {
+        return getString(R.string.default_open_app_not_set)
+    }
 
-// Maps an actual file's mime type (as detected from its extension) to one of the categories
-// above, so we know which stored per-app-scoped preference — if any — applies when the user
-// opens that specific file from within this file manager.
-fun mimeTypeToOpenCategory(mimeType: String): String? {
-    return when {
-        mimeType.startsWith("text/") || mimeType == "application/json" -> OPEN_CATEGORY_TEXT
-        mimeType.startsWith("image/") -> OPEN_CATEGORY_IMAGE
-        mimeType.startsWith("audio/") -> OPEN_CATEGORY_AUDIO
-        mimeType.startsWith("video/") -> OPEN_CATEGORY_VIDEO
-        mimeType == "application/pdf" -> OPEN_CATEGORY_PDF
-        mimeType == "application/msword" ||
-            mimeType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> OPEN_CATEGORY_WORD
-        mimeType == "application/vnd.ms-excel" ||
-            mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> OPEN_CATEGORY_EXCEL
-        mimeType == "application/vnd.ms-powerpoint" ||
-            mimeType == "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> OPEN_CATEGORY_PPT
-        else -> null
+    return try {
+        packageManager.getApplicationInfo(pkg, 0).loadLabel(packageManager).toString()
+    } catch (e: Exception) {
+        getString(R.string.default_open_app_not_set)
+    }
+}
+
+// Opens the app-picker for one category (e.g. tapping the "PDF 文档" row): lists every
+// installed app that can view that category, lets the user pick one (or "ask every time" to
+// clear the preference), and saves the choice — scoped to this app only.
+fun SettingsActivity.showAppPickerForCategory(category: OpenAppCategory, onSaved: () -> Unit) {
+    val candidates = getCandidateApps(category)
+    if (candidates.isEmpty()) {
+        toast(com.goodwy.commons.R.string.no_app_found)
+        return
+    }
+
+    val currentPkg = config.getDefaultOpenApp(category.key)
+
+    val items = ArrayList<RadioItem>()
+    items.add(RadioItem(0, getString(R.string.default_open_app_ask_everytime), ""))
+    candidates.forEachIndexed { index, (pkg, label) ->
+        items.add(RadioItem(index + 1, label, pkg))
+    }
+
+    val checkedId = items.indexOfFirst { it.value == currentPkg }.let { if (it == -1) 0 else it }
+
+    RadioGroupDialog(this, items, checkedId, R.string.default_open_apps) { newValue ->
+        config.setDefaultOpenApp(category.key, newValue as String)
+        onSaved()
     }
 }

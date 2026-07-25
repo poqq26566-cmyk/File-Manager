@@ -19,6 +19,8 @@
     <string name="audio_file">音频文件</string>
     <string name="video_file">视频文件</string>
     <string name="other_file">其他文件</string>
+    <string name="storage_scan_notification_channel">存储扫描</string>
+<string name="storage_scan_notification_title">正在扫描存储空间…</string>
     <string name="compress">压缩</string>
     <string name="decompress">解压缩</string>
     <string name="decompress_file_button">解压文件</string>

@@ -261,13 +261,18 @@ class StorageFragment(
     private fun refreshTrashSize() {
         val primaryVolumeName = if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
         val volumeBinding = volumes[primaryVolumeName] ?: return
+        com.goodwy.filemanager.services.StorageScanService.begin(context)
         ensureBackgroundThread {
-            val entries = com.goodwy.filemanager.helpers.TrashManager.getEntries(context)
-            val trashSizeLong = entries.sumOf { it.size }
-            context.config.saveCachedCategoryCount(primaryVolumeName, "trash", entries.size)
-            post {
-                volumeBinding.trashSize.text = trashSizeLong.formatSize()
-                volumeBinding.trashLabel.text = categoryLabel(R.string.recycle_bin, entries.size)
+            try {
+                val entries = com.goodwy.filemanager.helpers.TrashManager.getEntries(context)
+                val trashSizeLong = entries.sumOf { it.size }
+                context.config.saveCachedCategoryCount(primaryVolumeName, "trash", entries.size)
+                post {
+                    volumeBinding.trashSize.text = trashSizeLong.formatSize()
+                    volumeBinding.trashLabel.text = categoryLabel(R.string.recycle_bin, entries.size)
+                }
+            } finally {
+                com.goodwy.filemanager.services.StorageScanService.end(context)
             }
         }
     }
@@ -291,7 +296,9 @@ class StorageFragment(
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            val pm = context.packageManager
+            try {
+                com.goodwy.filemanager.services.StorageScanService.begin(context)
+                val pm = context.packageManager
             val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             val storageStatsManager = context.getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
             val userHandle: UserHandle = android.os.Process.myUserHandle()
@@ -325,6 +332,9 @@ class StorageFragment(
             post {
                 volumeBinding.cacheSize.text = totalCache.formatSize()
                 volumeBinding.cacheLabel.text = categoryLabel(R.string.cache, appsWithCache)
+            }
+            } finally {
+                com.goodwy.filemanager.services.StorageScanService.end(context)
             }
         }
     }
@@ -662,6 +672,8 @@ class StorageFragment(
 
     @SuppressLint("NewApi", "StringFormatInvalid")
     private fun getVolumeStorageStats(context: Context) {
+        com.goodwy.filemanager.services.StorageScanService.begin(context)
+        try {
         val externalDirs = context.getExternalFilesDirs(null)
         val storageManager = context.getSystemService(AppCompatActivity.STORAGE_SERVICE) as StorageManager
 
@@ -904,6 +916,9 @@ class StorageFragment(
                 }
             }
         }
+        } finally {
+            com.goodwy.filemanager.services.StorageScanService.end(context)
+        }
     }
 
     override fun searchQueryChanged(text: String) {
@@ -1105,6 +1120,8 @@ class StorageFragment(
     private fun getAllAppSize(volumeName: String) {
         if (checkAppOpsService()) {
             CoroutineScope(Dispatchers.IO).launch {
+                com.goodwy.filemanager.services.StorageScanService.begin(context)
+                try {
                 val pm = context.packageManager
                 val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
@@ -1155,6 +1172,9 @@ class StorageFragment(
                         context.config.saveCachedCategorySize(volumeName, "apps", appsSizeLong)
                         getVolumeStorageStats(context)
                     }
+                }
+                } finally {
+                    com.goodwy.filemanager.services.StorageScanService.end(context)
                 }
             }
         } else if (!context!!.config.checkAppOpsService) {

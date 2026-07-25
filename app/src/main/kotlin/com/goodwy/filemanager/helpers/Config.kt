@@ -222,4 +222,11 @@ class Config(context: Context) : BaseConfig(context) {
     fun setDefaultOpenApp(category: String, packageName: String) {
         prefs.edit().putString(PREFIX_DEFAULT_OPEN_APP + category, packageName).apply()
     }
+
+    // Optional whitelist of packages to show in the "default open app" picker — lets the user
+    // narrow a long installed-apps list down to just the handful they actually care about. An
+    // empty set means "no filter set up yet", in which case every installed app is shown.
+    var defaultOpenAppsFilter: Set<String>
+        get() = prefs.getStringSet(DEFAULT_OPEN_APPS_FILTER, emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet(DEFAULT_OPEN_APPS_FILTER, value).apply()
 }

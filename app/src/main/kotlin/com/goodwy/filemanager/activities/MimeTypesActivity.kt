@@ -337,6 +337,32 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             args.addAll(values)
         }
 
+        // application/octet-stream is a generic fallback MIME type Android assigns to files with
+        // extensions it doesn't recognize (.kt, .db, .dat, etc) — not just real archives. Treat it
+        // as an archive only when the filename itself actually looks like one, so unrelated files
+        // don't get misclassified into (or excluded from) the Archives tab just because MediaStore
+        // couldn't figure out their real type.
+        val archiveExtensions = listOf("zip", "rar", "7z", "tar", "gz", "jar", "cbr", "cbz")
+
+        fun archiveCondition(): Pair<String, List<String>> {
+            val confidentTypes = archiveMimeTypes.filter { it != "application/octet-stream" }
+            val condArgs = mutableListOf<String>()
+            val sb = StringBuilder()
+            if (confidentTypes.isNotEmpty()) {
+                sb.append("$col IN (${confidentTypes.joinToString(",") { "?" }})")
+                condArgs.addAll(confidentTypes)
+            }
+            if (archiveMimeTypes.contains("application/octet-stream")) {
+                if (sb.isNotEmpty()) sb.append(" OR ")
+                val nameCol = MediaStore.Files.FileColumns.DISPLAY_NAME
+                val extConditions = archiveExtensions.joinToString(" OR ") { "$nameCol LIKE ?" }
+                sb.append("($col = ? AND ($extConditions))")
+                condArgs.add("application/octet-stream")
+                archiveExtensions.forEach { condArgs.add("%.$it") }
+            }
+            return Pair(sb.toString(), condArgs)
+        }
+
         when (currentMimeType) {
             IMAGES -> likePrefix("image")
             VIDEOS -> likePrefix("video")
@@ -350,14 +376,29 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                 inList(extraDocumentMimeTypes)
             }
 
-            ARCHIVES -> inList(archiveMimeTypes)
+            ARCHIVES -> {
+                val (cond, condArgs) = archiveCondition()
+                if (cond.isNotEmpty()) {
+                    if (selection.isNotEmpty()) selection.append(" OR ")
+                    selection.append(cond)
+                    args.addAll(condArgs)
+                }
+            }
+
             INSTALL_PACKAGES -> inList(installPackageMimeTypes)
             OTHERS -> {
                 notLikePrefix("image")
                 notLikePrefix("video")
                 notLikePrefix("audio")
                 notLikePrefix("text")
-                notInList(extraAudioMimeTypes + extraDocumentMimeTypes + archiveMimeTypes + installPackageMimeTypes)
+                notInList(extraAudioMimeTypes + extraDocumentMimeTypes + installPackageMimeTypes)
+
+                val (cond, condArgs) = archiveCondition()
+                if (cond.isNotEmpty()) {
+                    if (selection.isNotEmpty()) selection.append(" AND ")
+                    selection.append("NOT ($cond)")
+                    args.addAll(condArgs)
+                }
             }
         }
 
@@ -656,3 +697,4 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
     }
 }
+ 

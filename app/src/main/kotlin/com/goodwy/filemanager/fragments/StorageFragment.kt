@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
@@ -44,6 +45,7 @@ import com.goodwy.filemanager.extensions.getAllVolumeNames
 import com.goodwy.filemanager.helpers.*
 import com.goodwy.filemanager.interfaces.ItemOperationsListener
 import com.goodwy.filemanager.models.ListItem
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -123,6 +125,15 @@ class StorageFragment(
                 val cachedTrashCount = context.config.getCachedCategoryCount(volumeName, "trash")
                 if (cachedTrashCount >= 0) {
                     trashLabel.text = categoryLabel(R.string.recycle_bin, cachedTrashCount)
+                }
+
+                val cachedCacheSize = context.config.getCachedCategorySize(volumeName, "cache")
+                if (cachedCacheSize >= 0) {
+                    cacheSize.text = cachedCacheSize.formatSize()
+                }
+                val cachedCacheCount = context.config.getCachedCategoryCount(volumeName, "cache")
+                if (cachedCacheCount >= 0) {
+                    cacheLabel.text = categoryLabel(R.string.cache, cachedCacheCount)
                 }
 
                 mapOf(
@@ -212,9 +223,20 @@ class StorageFragment(
                 archivesHolder.setOnClickListener { launchMimetypeActivity(ARCHIVES, volumeName) }
                 installPackagesHolder.setOnClickListener { launchMimetypeActivity(INSTALL_PACKAGES, volumeName) }
                 othersHolder.setOnClickListener { launchMimetypeActivity(OTHERS, volumeName) }
+                cacheHolder.setOnClickListener {
+                    val cacheDir = File(context.internalStoragePath, "Android/data")
+                    Intent(context, MainActivity::class.java).apply {
+                        action = Intent.ACTION_VIEW
+                        data = Uri.fromFile(cacheDir)
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        context.startActivity(this)
+                    }
+                }
 
                 val isPrimaryVolume = volumeName == if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
                 trashHolder.beVisibleIf(isPrimaryVolume)
+                cacheHolder.beVisibleIf(isPrimaryVolume)
+                cacheDivider.beVisibleIf(isPrimaryVolume)
                 if (isPrimaryVolume) {
                     trashHolder.setOnClickListener {
                         Intent(context, TrashActivity::class.java).apply {
@@ -231,6 +253,7 @@ class StorageFragment(
         }
 
         refreshTrashSize()
+        refreshCacheSize()
 
         Handler(Looper.getMainLooper()).postDelayed({
             refreshFragment()
@@ -251,12 +274,66 @@ class StorageFragment(
         }
     }
 
+    // "Cache" here means each app's own external cache folders under Android/data/<pkg>/cache
+    // and .../code_cache — the stuff normally freed by "Clear cache" in system app info, as
+    // opposed to app data in general. Walking the whole Android/data tree is I/O heavy (many
+    // small stat() calls across potentially hundreds of app folders), so this always runs off
+    // the main thread and many per-folder failures (permission-restricted app dirs) are expected
+    // and silently skipped rather than surfaced as errors.
+    private fun refreshCacheSize() {
+        val primaryVolumeName = if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
+        val volumeBinding = volumes[primaryVolumeName] ?: return
+        ensureBackgroundThread {
+            val (cacheSizeLong, cacheCount) = getCacheStats()
+            context.config.saveCachedCategorySize(primaryVolumeName, "cache", cacheSizeLong)
+            context.config.saveCachedCategoryCount(primaryVolumeName, "cache", cacheCount)
+            post {
+                volumeBinding.cacheSize.text = cacheSizeLong.formatSize()
+                volumeBinding.cacheLabel.text = categoryLabel(R.string.cache, cacheCount)
+            }
+        }
+    }
+
+    private fun getCacheStats(): Pair<Long, Int> {
+        var totalSize = 0L
+        var totalCount = 0
+        try {
+            val androidDataDir = File(context.internalStoragePath, "Android/data")
+            val packageDirs = androidDataDir.listFiles() ?: return Pair(0L, 0)
+            packageDirs.forEach { pkgDir ->
+                try {
+                    listOf("cache", "code_cache").forEach { cacheDirName ->
+                        val cacheDir = File(pkgDir, cacheDirName)
+                        if (cacheDir.isDirectory) {
+                            // onEnter/onFail default to skipping unreadable directories instead of
+                            // throwing, which matters here since most app cache dirs will refuse
+                            // access even with All Files Access on some OEM builds.
+                            cacheDir.walkTopDown().forEach { file ->
+                                try {
+                                    if (file.isFile) {
+                                        totalSize += file.length()
+                                        totalCount++
+                                    }
+                                } catch (_: Exception) {
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return Pair(totalSize, totalCount)
+    }
+
     override fun onResume(textColor: Int) {
         context.updateTextColors(binding.root)
 
         val properPrimaryColor = context.getProperPrimaryColor()
 
         refreshTrashSize()
+        refreshCacheSize()
 
         volumes.values.forEach { volumeBinding ->
             volumeBinding.apply {
@@ -1169,4 +1246,5 @@ class StorageFragment(
 
     override fun myRecyclerView() = binding.storageNestedScrollview
 }
-               
+     
+  

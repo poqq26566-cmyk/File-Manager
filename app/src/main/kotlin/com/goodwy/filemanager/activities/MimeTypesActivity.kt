@@ -1,6 +1,7 @@
 package com.goodwy.filemanager.activities
 
 import android.app.SearchManager
+import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
@@ -36,6 +37,15 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         // Cache the last loaded list per volume+mimetype so re-opening a category shows something
         // instantly instead of a blank screen, while a fresh query silently refreshes it underneath.
         private val itemsCache = mutableMapOf<String, ArrayList<ListItem>>()
+
+        // On a category with tens of thousands of matching files, running the full unlimited
+        // MediaStore query before showing anything can leave the user staring at a spinner for
+        // a long time (reported: ~40s for Documents on a loaded device) even though the WHERE
+        // clause already narrows the query to just that category. Fetch this many of the most
+        // recently modified matches first so something appears almost immediately, then run the
+        // full query in the background and swap in the complete, correctly sorted list once it's
+        // ready.
+        private const val INITIAL_LOAD_LIMIT = 300
     }
 
     private val binding by viewBinding(ActivityMimetypesBinding::inflate)
@@ -413,7 +423,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         return Pair(fullSelection, args.toTypedArray())
     }
 
-    private fun getProperFileDirItems(callback: (ArrayList<FileDirItem>) -> Unit) {
+    private fun getProperFileDirItems(limit: Int? = null, callback: (ArrayList<FileDirItem>) -> Unit) {
         val fileDirItems = ArrayList<FileDirItem>()
         val showHidden = config.shouldShowHidden()
         val uri = MediaStore.Files.getContentUri(currentVolume)
@@ -432,7 +442,21 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         val (selection, selectionArgs) = buildMimeTypeSelection()
 
         try {
-            val cursor = contentResolver.query(uri, projection, selection, selectionArgs, null)
+            // When a limit is given (used for the fast first-paint pass, see reFetchItems), pass
+            // it through the official Bundle query args (API 26+, matches our minSdk) instead of
+            // pulling the whole cursor and truncating in Kotlin — that would still force the
+            // provider to scan and hand back every matching row, defeating the point of limiting.
+            val cursor = if (limit != null) {
+                val queryArgs = android.os.Bundle().apply {
+                    putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                    putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+                    putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")
+                    putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+                }
+                contentResolver.query(uri, projection, queryArgs, null)
+            } else {
+                contentResolver.query(uri, projection, selection, selectionArgs, null)
+            }
             cursor?.use {
                 while (it.moveToNext()) {
                     // Bail out as soon as the screen is gone (e.g. user pressed back) instead of
@@ -550,33 +574,61 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
         stillLoadingHandler.postDelayed(stillLoadingRunnable, 10000L)
 
-        getProperFileDirItems { fileDirItems ->
-            stillLoadingHandler.removeCallbacks(stillLoadingRunnable)
-            val listItems = getListItemsFromFileDirItems(fileDirItems)
+        val runFullQuery: () -> Unit = {
+            getProperFileDirItems { fileDirItems ->
+                stillLoadingHandler.removeCallbacks(stillLoadingRunnable)
+                val listItems = getListItemsFromFileDirItems(fileDirItems)
 
-            if (currentMimeType == INSTALL_PACKAGES) {
-                allInstallItems = listItems
-                val filtered = filterInstallItems(listItems)
-                FileDirItem.sorting = config.getFolderSorting(currentMimeType)
-                filtered.sort()
-                runOnUiThread {
-                    addItems(filtered)
-                    if (currentViewType != config.getFolderViewType(currentMimeType)) {
-                        setupLayoutManager()
+                if (currentMimeType == INSTALL_PACKAGES) {
+                    allInstallItems = listItems
+                    val filtered = filterInstallItems(listItems)
+                    FileDirItem.sorting = config.getFolderSorting(currentMimeType)
+                    filtered.sort()
+                    runOnUiThread {
+                        addItems(filtered)
+                        if (currentViewType != config.getFolderViewType(currentMimeType)) {
+                            setupLayoutManager()
+                        }
+                        isFetching = false
                     }
-                    isFetching = false
+                } else {
+                    itemsCache[cacheKey] = listItems
+                    FileDirItem.sorting = config.getFolderSorting(currentMimeType)
+                    listItems.sort()
+                    runOnUiThread {
+                        addItems(listItems)
+                        if (currentViewType != config.getFolderViewType(currentMimeType)) {
+                            setupLayoutManager()
+                        }
+                        isFetching = false
+                    }
                 }
+            }
+        }
+
+        // Install packages has extra "installed / not installed" tab filtering on top of the raw
+        // list, so skip the fast-partial pass there and keep its existing single-query behavior.
+        if (currentMimeType == INSTALL_PACKAGES) {
+            runFullQuery()
+            return
+        }
+
+        getProperFileDirItems(limit = INITIAL_LOAD_LIMIT) { partialFileDirItems ->
+            val partialListItems = getListItemsFromFileDirItems(partialFileDirItems)
+            FileDirItem.sorting = config.getFolderSorting(currentMimeType)
+            partialListItems.sort()
+            runOnUiThread {
+                addItems(partialListItems)
+            }
+
+            // Fewer rows than the limit means the provider already handed back every matching
+            // row — that partial list IS the complete result, no need to re-run the full scan.
+            if (partialFileDirItems.size < INITIAL_LOAD_LIMIT) {
+                stillLoadingHandler.removeCallbacks(stillLoadingRunnable)
+                itemsCache[cacheKey] = partialListItems
+                runOnUiThread { isFetching = false }
             } else {
-                itemsCache[cacheKey] = listItems
-                FileDirItem.sorting = config.getFolderSorting(currentMimeType)
-                listItems.sort()
-                runOnUiThread {
-                    addItems(listItems)
-                    if (currentViewType != config.getFolderViewType(currentMimeType)) {
-                        setupLayoutManager()
-                    }
-                    isFetching = false
-                }
+                runFullQuery()
             }
         }
     }

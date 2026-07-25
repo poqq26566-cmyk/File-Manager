@@ -59,6 +59,7 @@
     
     <string name="others">Others</string>
     <string name="recycle_bin">Recycle Bin</string>
+    <string name="text_saved">Text saved</string>
     <string name="trash_empty_placeholder">Recycle bin is empty</string>
     <string name="empty_recycle_bin">Empty recycle bin</string>
     <string name="restore_all">Restore all</string>

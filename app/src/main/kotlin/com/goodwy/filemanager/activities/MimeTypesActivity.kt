@@ -342,7 +342,6 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         // as an archive only when the filename itself actually looks like one, so unrelated files
         // don't get misclassified into (or excluded from) the Archives tab just because MediaStore
         // couldn't figure out their real type.
-        val archiveExtensions = listOf("zip", "rar", "7z", "tar", "gz", "jar", "cbr", "cbz")
 
         fun archiveCondition(): Pair<String, List<String>> {
             val confidentTypes = archiveMimeTypes.filter { it != "application/octet-stream" }
@@ -402,8 +401,15 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
             }
         }
 
-        // MIME_TYPE can be NULL for some rows (e.g. folders); none of our categories want those.
-        val fullSelection = "$col IS NOT NULL" + if (selection.isNotEmpty()) " AND (${selection})" else ""
+        // MIME_TYPE can be NULL for some rows. For every category except Others that just means
+        // "not a match" (folders, etc), so exclude them. But Others' own size total on the Storage
+        // tab already counts files MediaStore couldn't identify a type for, so Others' browsable
+        // list needs to include those NULL-mimetype rows too, or the two would disagree.
+        val fullSelection = if (currentMimeType == OTHERS) {
+            if (selection.isNotEmpty()) "$col IS NULL OR ($col IS NOT NULL AND ($selection))" else "1"
+        } else {
+            "$col IS NOT NULL" + if (selection.isNotEmpty()) " AND (${selection})" else ""
+        }
         return Pair(fullSelection, args.toTypedArray())
     }
 
@@ -438,7 +444,10 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
                     }
 
                     try {
-                        val fullMimetype = it.getStringValue(MediaStore.Files.FileColumns.MIME_TYPE)?.lowercase(Locale.getDefault()) ?: continue
+                        val fullMimetype = it.getStringValue(MediaStore.Files.FileColumns.MIME_TYPE)?.lowercase(Locale.getDefault())
+                        if (fullMimetype == null && currentMimeType != OTHERS) {
+                            continue
+                        }
                         val name = it.getStringValue(MediaStore.Files.FileColumns.DISPLAY_NAME)
                         val path = it.getStringValue(MediaStore.Files.FileColumns.DATA)
 
@@ -449,6 +458,12 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
 
                         val size = it.getLongValue(MediaStore.Files.FileColumns.SIZE)
                         if (size == 0L) {
+                            continue
+                        }
+
+                        // Null-mimetype rows can be directories that slipped through; the Storage tab's
+                        // Others total already excludes those, so match that here too.
+                        if (fullMimetype == null && getIsPathDirectory(path)) {
                             continue
                         }
 
@@ -697,4 +712,3 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
         }
     }
 }
- 

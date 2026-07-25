@@ -66,6 +66,12 @@ class ReadTextActivity : SimpleActivity() {
         searchNextBtn = findViewById(R.id.search_next)
         searchClearBtn = findViewById(R.id.search_clear)
 
+        // this view's width is now content-driven (wrapped in a HorizontalScrollView so long
+        // lines scroll instead of wrapping), which is incompatible with GestureEditText's
+        // pinch-zoom size sync (see the comment on isZoomSyncEnabled) — must be set before the
+        // first layout pass
+        binding.readTextView.isZoomSyncEnabled = false
+
         setupLineNumbers()
 
         if (checkAppSideloading()) {

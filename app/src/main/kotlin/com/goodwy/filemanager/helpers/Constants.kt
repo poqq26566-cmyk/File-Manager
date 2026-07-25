@@ -121,6 +121,15 @@ val archiveMimeTypes = arrayListOf(
 // just real archives) before counting/showing them as archives.
 val archiveExtensions = listOf("zip", "rar", "7z", "tar", "gz", "jar", "cbr", "cbz")
 
+// Source-code / plain-text-ish extensions MediaStore usually can't assign a real MIME type to (they
+// get the same generic application/octet-stream fallback as everything else unrecognized), so
+// without this they'd land in Others even though they're clearly documents.
+val documentExtensions = listOf(
+    "kt", "kts", "java", "py", "c", "cpp", "cc", "h", "hpp", "cs", "go", "rs", "rb", "php",
+    "swift", "sh", "bat", "yaml", "yml", "ini", "cfg", "conf", "gradle", "properties", "md",
+    "markdown", "log", "sql", "ts", "tsx", "jsx", "toml", "lua", "dart", "vue", "xml"
+)
+
 val installPackageMimeTypes = arrayListOf(
     "application/vnd.android.ota",
     "application/apk",

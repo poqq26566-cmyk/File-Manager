@@ -27,6 +27,7 @@ import com.goodwy.filemanager.adapters.DecompressItemsAdapter
 import com.goodwy.filemanager.databinding.ActivityDecompressBinding
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.extensions.setLastModified
+import com.goodwy.filemanager.extensions.tryOpenPathIntent
 import com.goodwy.filemanager.helpers.EXTRA_OPEN_PATH
 import com.goodwy.filemanager.models.ListItem
 import net.lingala.zip4j.exception.ZipException
@@ -123,11 +124,63 @@ class DecompressActivity : SimpleActivity() {
     private fun updateAdapter(listItems: MutableList<ListItem>) {
         runOnUiThread {
             DecompressItemsAdapter(this, listItems, binding.decompressList) {
-                if ((it as ListItem).isDirectory) {
-                    updateCurrentPath(it.path)
+                val tapped = it as ListItem
+                if (tapped.isDirectory) {
+                    updateCurrentPath(tapped.path)
+                } else {
+                    extractAndOpenSingleFile(tapped)
                 }
             }.apply {
                 binding.decompressList.adapter = this
+            }
+        }
+    }
+
+    // Tapping a file inside the zip before extracting it (e.g. an APK) — pull just that one entry
+    // out into the cache dir and open it right away, instead of requiring a full extraction first.
+    private fun extractAndOpenSingleFile(item: ListItem) {
+        ensureBackgroundThread {
+            try {
+                val inputStream = contentResolver.openInputStream(uri!!)
+                val zipInputStream = ZipInputStream(BufferedInputStream(inputStream!!))
+                if (password != null) {
+                    zipInputStream.setPassword(password?.toCharArray())
+                }
+
+                val cacheFile = File(cacheDir, item.name)
+                var found = false
+
+                zipInputStream.use {
+                    val buffer = ByteArray(1024)
+                    while (true) {
+                        val entry = zipInputStream.nextEntry ?: break
+                        if (entry.fileName == item.path) {
+                            val fos = java.io.FileOutputStream(cacheFile)
+                            fos.use { out ->
+                                var count: Int
+                                while (true) {
+                                    count = zipInputStream.read(buffer)
+                                    if (count == -1) break
+                                    out.write(buffer, 0, count)
+                                }
+                            }
+                            found = true
+                            break
+                        }
+                    }
+                }
+
+                runOnUiThread {
+                    if (found) {
+                        tryOpenPathIntent(cacheFile.absolutePath, false)
+                    } else {
+                        toast(R.string.unknown_error_occurred)
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    showErrorToast(e)
+                }
             }
         }
     }

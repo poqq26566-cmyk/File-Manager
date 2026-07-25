@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.goodwy.filemanager.R
@@ -24,24 +26,63 @@ class StorageScanService : Service() {
     companion object {
         private const val CHANNEL_ID = "storage_scan_channel"
         private const val NOTIFICATION_ID = 7301
+
+        // How long to wait between retries when a stop is requested before the service has
+        // confirmed startForeground() actually ran. Kept short: in the common case the flag is
+        // already true by the time this fires and it stops on the very first check.
+        private const val STOP_RETRY_MS = 60L
+        private const val MAX_STOP_RETRIES = 15 // ~900ms worst case, well under the ANR/crash window
+
         private val activeScanCount = AtomicInteger(0)
+        private val stopHandler = Handler(Looper.getMainLooper())
+        private var pendingStop: Runnable? = null
+
+        // Set true by the running instance right after startForeground() succeeds, false once it's
+        // gone. Some scans (an empty trash folder, a cache scan with few apps) finish fast enough
+        // that a stop request can arrive before the freshly-started service even reaches
+        // onCreate() on the main thread — stopping at that point is a race Android 12+ punishes
+        // with a hard crash ("did not then call startForeground()"), so a stop only actually
+        // happens once this is confirmed true.
+        @Volatile
+        private var isForegroundActive = false
 
         // Call right before starting a scan. Safe to call concurrently from multiple scans — only
         // the transition from 0 to 1 actually starts the service.
+        @Synchronized
         fun begin(context: Context) {
+            pendingStop?.let { stopHandler.removeCallbacks(it) }
+            pendingStop = null
             if (activeScanCount.getAndIncrement() == 0) {
                 val intent = Intent(context.applicationContext, StorageScanService::class.java)
                 ContextCompat.startForegroundService(context.applicationContext, intent)
             }
         }
 
-        // Call once that scan is done, on every exit path. Stops the service once every scan that
-        // called begin() has called end().
+        // Call once that scan is done, on every exit path. Once every scan that called begin() has
+        // called end(), the service is stopped as soon as it's confirmed to have actually started.
+        @Synchronized
         fun end(context: Context) {
             val remaining = activeScanCount.updateAndGet { (it - 1).coerceAtLeast(0) }
             if (remaining == 0) {
-                context.applicationContext.stopService(Intent(context.applicationContext, StorageScanService::class.java))
+                val appContext = context.applicationContext
+                scheduleStop(appContext, MAX_STOP_RETRIES)
             }
+        }
+
+        private fun scheduleStop(appContext: Context, retriesLeft: Int) {
+            val stopRunnable = Runnable {
+                when {
+                    activeScanCount.get() != 0 -> {
+                        // a new scan started in the meantime, begin() already cancelled us — no-op
+                    }
+                    isForegroundActive || retriesLeft <= 0 -> {
+                        appContext.stopService(Intent(appContext, StorageScanService::class.java))
+                    }
+                    else -> scheduleStop(appContext, retriesLeft - 1)
+                }
+            }
+            pendingStop = stopRunnable
+            stopHandler.postDelayed(stopRunnable, STOP_RETRY_MS)
         }
     }
 
@@ -56,6 +97,12 @@ class StorageScanService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        isForegroundActive = true
+    }
+
+    override fun onDestroy() {
+        isForegroundActive = false
+        super.onDestroy()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

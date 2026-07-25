@@ -116,6 +116,11 @@ val archiveMimeTypes = arrayListOf(
     //"application/octet-stream",  //rar?
 )
 
+// Real archive file extensions, used to double-check "application/octet-stream" matches (a generic
+// fallback MIME type Android assigns to files with unrecognized extensions like .kt/.db/.dat, not
+// just real archives) before counting/showing them as archives.
+val archiveExtensions = listOf("zip", "rar", "7z", "tar", "gz", "jar", "cbr", "cbz")
+
 val installPackageMimeTypes = arrayListOf(
     "application/vnd.android.ota",
     "application/apk",

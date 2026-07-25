@@ -78,6 +78,35 @@ class ReadTextActivity : SimpleActivity() {
             return
         }
 
+        loadFileFromIntent(savedInstanceState)
+
+        setupSearchButtons()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        // the system can hand an already-running instance of this activity a fresh intent
+        // instead of creating a new one (e.g. reopening the same file from outside the app
+        // while this screen is still alive in the background task) — without this, the editor
+        // would keep showing whatever was in memory from the previous open instead of the
+        // file's current on-disk content
+        val hasUnsavedChanges = originalText != binding.readTextView.text.toString()
+        if (hasUnsavedChanges) {
+            ConfirmationAdvancedDialog(this, "", R.string.save_before_closing, R.string.save, R.string.discard) {
+                if (it) {
+                    saveText(false)
+                } else {
+                    loadFileFromIntent(null)
+                }
+            }
+        } else {
+            loadFileFromIntent(null)
+        }
+    }
+
+    private fun loadFileFromIntent(savedInstanceState: Bundle?) {
         val uri = if (intent.extras?.containsKey(REAL_FILE_PATH) == true) {
             Uri.fromFile(File(intent.extras?.get(REAL_FILE_PATH).toString()))
         } else {
@@ -99,8 +128,6 @@ class ReadTextActivity : SimpleActivity() {
                 checkIntent(uri, savedInstanceState)
             }
         }
-
-        setupSearchButtons()
     }
 
     override fun onResume() {

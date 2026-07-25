@@ -9,7 +9,7 @@
         android:title="@string/delete" />
     <item
         android:id="@+id/cab_move_to"
-        android:icon="@drawable/ic_move_vector"
+        android:icon="@drawable/ic_move_to_folder"
         android:title="@string/move_to" />
     <item
         android:id="@+id/cab_copy_to"

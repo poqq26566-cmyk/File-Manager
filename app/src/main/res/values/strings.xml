@@ -61,6 +61,7 @@
     
     <string name="others">Others</string>
     <string name="cache">Cache</string>
+    <string name="group_by_folder">Group by folder</string>
     <string name="recycle_bin">Recycle Bin</string>
     <string name="text_saved">Text saved</string>
     <string name="trash_empty_placeholder">Recycle bin is empty</string>

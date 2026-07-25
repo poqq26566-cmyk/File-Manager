@@ -128,7 +128,8 @@
             android:name=".activities.ReadTextActivity"
             android:configChanges="orientation"
             android:exported="true"
-            android:label="@string/file_editor">
+            android:label="@string/file_editor"
+            android:taskAffinity="">
 
             <meta-data
                 android:name="android.app.default_searchable"
@@ -150,7 +151,8 @@
             android:name=".activities.DecompressActivity"
             android:configChanges="orientation"
             android:exported="true"
-            android:label="@string/decompress">
+            android:label="@string/decompress"
+            android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <data android:mimeType="application/zip" />
@@ -162,7 +164,8 @@
             android:name=".activities.SaveAsActivity"
             android:configChanges="orientation"
             android:exported="true"
-            android:label="@string/save_as">
+            android:label="@string/save_as"
+            android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

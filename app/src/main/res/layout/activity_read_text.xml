@@ -39,16 +39,38 @@
             android:layout_height="match_parent"
             android:fillViewport="true">
 
-            <com.goodwy.filemanager.views.GestureEditText
-                android:id="@+id/read_text_view"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@null"
-                android:gravity="top"
-                android:inputType="textMultiLine|textNoSuggestions"
-                android:padding="@dimen/medium_margin"
-                android:textCursorDrawable="@null"
-                android:textSize="@dimen/smaller_text_size" />
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/line_numbers_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/medium_margin"
+                    android:layout_marginBottom="@dimen/medium_margin"
+                    android:layout_marginStart="@dimen/medium_margin"
+                    android:gravity="top|end"
+                    android:minEms="2"
+                    android:textSize="@dimen/smaller_text_size" />
+
+                <com.goodwy.filemanager.views.GestureEditText
+                    android:id="@+id/read_text_view"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:gravity="top"
+                    android:inputType="textMultiLine|textNoSuggestions"
+                    android:paddingTop="@dimen/medium_margin"
+                    android:paddingBottom="@dimen/medium_margin"
+                    android:paddingStart="@dimen/small_margin"
+                    android:paddingEnd="@dimen/medium_margin"
+                    android:textCursorDrawable="@null"
+                    android:textSize="@dimen/smaller_text_size" />
+
+            </LinearLayout>
 
         </androidx.core.widget.NestedScrollView>
     </LinearLayout>

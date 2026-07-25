@@ -212,4 +212,14 @@ class Config(context: Context) : BaseConfig(context) {
     var swipeRipple: Boolean
         get() = prefs.getBoolean(SWIPE_RIPPLE, false)
         set(swipeRipple) = prefs.edit().putBoolean(SWIPE_RIPPLE, swipeRipple).apply()
+
+    // App-scoped "default app" per file category (text/image/audio/video/pdf/word/excel/ppt).
+    // Stored as just a package name; an empty string means "not set, ask every time". This is
+    // entirely separate from Android's system-wide default-app settings.
+    fun getDefaultOpenApp(category: String): String =
+        prefs.getString(PREFIX_DEFAULT_OPEN_APP + category, "") ?: ""
+
+    fun setDefaultOpenApp(category: String, packageName: String) {
+        prefs.edit().putString(PREFIX_DEFAULT_OPEN_APP + category, packageName).apply()
+    }
 }

@@ -118,29 +118,56 @@ class MainActivity : SimpleActivity() {
     // Lets the app be picked from another app's Share sheet (plain text only) and saves the
     // shared text as a new file, similar to the system "Save as" share target.
     private fun handleSharedTextIntent() {
-        if (intent.action != Intent.ACTION_SEND || intent.type != "text/plain") {
-            return
-        }
-
-        val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
-        if (sharedText.isNullOrEmpty()) {
-            return
-        }
-
-        SaveAsDialog(this, "", false) { path, _ ->
-            if (hasStoragePermission()) {
-                try {
-                    val file = File(path)
-                    file.parentFile?.mkdirs()
-                    file.writeText(sharedText)
-                    toast(R.string.text_saved)
-                    openPath(path.getParentPath(), forceRefresh = true)
-                } catch (e: Exception) {
-                    showErrorToast(e)
-                }
-            } else {
-                toast(R.string.no_storage_permissions)
+        try {
+            if (intent.action != Intent.ACTION_SEND || intent.type != "text/plain") {
+                return
             }
+
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (sharedText.isNullOrEmpty()) {
+                return
+            }
+
+            SaveAsDialog(this, "", false) { path, _ ->
+                if (hasStoragePermission()) {
+                    try {
+                        val file = File(path)
+                        file.parentFile?.mkdirs()
+                        file.writeText(sharedText)
+                        toast(R.string.text_saved)
+                        openPath(path.getParentPath(), forceRefresh = true)
+                    } catch (e: Exception) {
+                        showDebugErrorDialog("Save failed", e)
+                    }
+                } else {
+                    toast(R.string.no_storage_permissions)
+                }
+            }
+        } catch (e: Exception) {
+            showDebugErrorDialog("handleSharedTextIntent crashed", e)
+        }
+    }
+
+    // Temporary debugging helper: shows the full stack trace in a copyable, non-time-limited
+    // dialog instead of a Toast (which can get cut off / disappear too fast to read).
+    private fun showDebugErrorDialog(title: String, e: Exception) {
+        android.util.Log.e("SharedTextSave", title, e)
+        val fullTrace = "$title\n\n${android.util.Log.getStackTraceString(e)}"
+        runOnUiThread {
+            val textView = android.widget.TextView(this).apply {
+                text = fullTrace
+                setPadding(48, 32, 48, 32)
+                setTextIsSelectable(true)
+                textSize = 12f
+            }
+            val scrollView = android.widget.ScrollView(this).apply {
+                addView(textView)
+            }
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Error")
+                .setView(scrollView)
+                .setPositiveButton("OK", null)
+                .show()
         }
     }
 

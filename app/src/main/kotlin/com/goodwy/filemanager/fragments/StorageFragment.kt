@@ -115,19 +115,42 @@ class StorageFragment(
                     appsSizeLong = cachedApps
                     appsSize.text = cachedApps.formatSize()
                 }
+                val cachedAppsCount = context.config.getCachedCategoryCount(volumeName, "apps")
+                if (cachedAppsCount >= 0) {
+                    appsLabel.text = categoryLabel(R.string.apps, cachedAppsCount)
+                }
+
+                val cachedTrashCount = context.config.getCachedCategoryCount(volumeName, "trash")
+                if (cachedTrashCount >= 0) {
+                    trashLabel.text = categoryLabel(R.string.recycle_bin, cachedTrashCount)
+                }
 
                 mapOf(
-                    IMAGES to imagesSize,
-                    VIDEOS to videosSize,
-                    AUDIO to audioSize,
-                    DOCUMENTS to documentsSize,
-                    ARCHIVES to archivesSize,
-                    INSTALL_PACKAGES to installPackagesSize,
-                    OTHERS to othersSize
-                ).forEach { (category, label) ->
+                    IMAGES to Pair(imagesSize, imagesLabel),
+                    VIDEOS to Pair(videosSize, videosLabel),
+                    AUDIO to Pair(audioSize, audioLabel),
+                    DOCUMENTS to Pair(documentsSize, documentsLabel),
+                    ARCHIVES to Pair(archivesSize, archivesLabel),
+                    INSTALL_PACKAGES to Pair(installPackagesSize, installPackagesLabel),
+                    OTHERS to Pair(othersSize, othersLabel)
+                ).forEach { (category, views) ->
+                    val (sizeView, labelView) = views
                     val cachedSize = context.config.getCachedCategorySize(volumeName, category)
                     if (cachedSize >= 0) {
-                        label.text = cachedSize.formatSize()
+                        sizeView.text = cachedSize.formatSize()
+                    }
+                    val cachedCount = context.config.getCachedCategoryCount(volumeName, category)
+                    if (cachedCount >= 0) {
+                        val nameResId = when (category) {
+                            IMAGES -> R.string.images
+                            VIDEOS -> R.string.videos
+                            AUDIO -> R.string.audio
+                            DOCUMENTS -> R.string.documents
+                            ARCHIVES -> R.string.archives
+                            INSTALL_PACKAGES -> R.string.install_packages
+                            else -> R.string.others
+                        }
+                        labelView.text = categoryLabel(nameResId, cachedCount)
                     }
                 }
 
@@ -218,9 +241,12 @@ class StorageFragment(
         val primaryVolumeName = if (isQPlus()) PRIMARY_VOLUME_NAME else PRIMARY_VOLUME_NAME_OLD
         val volumeBinding = volumes[primaryVolumeName] ?: return
         ensureBackgroundThread {
-            val trashSizeLong = com.goodwy.filemanager.helpers.TrashManager.getTotalSize(context)
+            val entries = com.goodwy.filemanager.helpers.TrashManager.getEntries(context)
+            val trashSizeLong = entries.sumOf { it.size }
+            context.config.saveCachedCategoryCount(primaryVolumeName, "trash", entries.size)
             post {
                 volumeBinding.trashSize.text = trashSizeLong.formatSize()
+                volumeBinding.trashLabel.text = categoryLabel(R.string.recycle_bin, entries.size)
             }
         }
     }
@@ -328,7 +354,7 @@ class StorageFragment(
 
     private fun getSizes(volumeName: String) {
         ensureBackgroundThread {
-            val filesSize = getSizesByMimeType(volumeName)
+            val (filesSize, fileCounts) = getSizesByMimeType(volumeName)
             val fileSizeImages = filesSize[IMAGES]!!
             val fileSizeVideos = filesSize[VIDEOS]!!
             val fileSizeAudios = filesSize[AUDIO]!!
@@ -337,33 +363,65 @@ class StorageFragment(
             val fileSizeInstallPackages = filesSize[INSTALL_PACKAGES]!!
             val fileSizeOthers = filesSize[OTHERS]!!
 
+            val fileCountImages = fileCounts[IMAGES]!!
+            val fileCountVideos = fileCounts[VIDEOS]!!
+            val fileCountAudios = fileCounts[AUDIO]!!
+            val fileCountDocuments = fileCounts[DOCUMENTS]!!
+            val fileCountArchives = fileCounts[ARCHIVES]!!
+            val fileCountInstallPackages = fileCounts[INSTALL_PACKAGES]!!
+            val fileCountOthers = fileCounts[OTHERS]!!
+
+            mapOf(
+                IMAGES to fileCountImages,
+                VIDEOS to fileCountVideos,
+                AUDIO to fileCountAudios,
+                DOCUMENTS to fileCountDocuments,
+                ARCHIVES to fileCountArchives,
+                INSTALL_PACKAGES to fileCountInstallPackages,
+                OTHERS to fileCountOthers
+            ).forEach { (category, count) ->
+                context.config.saveCachedCategoryCount(volumeName, category, count)
+            }
+
             post {
                 volumes[volumeName]!!.apply {
                     imagesSize.text = fileSizeImages.formatSize()
+                    imagesLabel.text = categoryLabel(R.string.images, fileCountImages)
                     //imagesProgressbar.progress = (fileSizeImages / SIZE_DIVIDER).toInt()
 
                     videosSize.text = fileSizeVideos.formatSize()
+                    videosLabel.text = categoryLabel(R.string.videos, fileCountVideos)
                     //videosProgressbar.progress = (fileSizeVideos / SIZE_DIVIDER).toInt()
 
                     audioSize.text = fileSizeAudios.formatSize()
+                    audioLabel.text = categoryLabel(R.string.audio, fileCountAudios)
                     //audioProgressbar.progress = (fileSizeAudios / SIZE_DIVIDER).toInt()
 
                     documentsSize.text = fileSizeDocuments.formatSize()
+                    documentsLabel.text = categoryLabel(R.string.documents, fileCountDocuments)
                     //documentsProgressbar.progress = (fileSizeDocuments / SIZE_DIVIDER).toInt()
 
                     archivesSize.text = fileSizeArchives.formatSize()
+                    archivesLabel.text = categoryLabel(R.string.archives, fileCountArchives)
                     //archivesProgressbar.progress = (fileSizeArchives / SIZE_DIVIDER).toInt()
 
                     installPackagesSize.text = fileSizeInstallPackages.formatSize()
+                    installPackagesLabel.text = categoryLabel(R.string.install_packages, fileCountInstallPackages)
 
                     othersSize.text = fileSizeOthers.formatSize()
+                    othersLabel.text = categoryLabel(R.string.others, fileCountOthers)
                     //othersProgressbar.progress = (fileSizeOthers / SIZE_DIVIDER).toInt()
                 }
             }
         }
     }
 
-    private fun getSizesByMimeType(volumeName: String): HashMap<String, Long> {
+    // Appends the file count to a category's label, e.g. "Documents (1643)", matching the format
+    // used for the size caching above so both appear together as soon as they're known.
+    private fun categoryLabel(nameResId: Int, count: Int): String =
+        context.getString(R.string.category_name_with_count, context.getString(nameResId), count)
+
+    private fun getSizesByMimeType(volumeName: String): Pair<HashMap<String, Long>, HashMap<String, Int>> {
         val uri = MediaStore.Files.getContentUri(volumeName)
         val projection = arrayOf(
             MediaStore.Files.FileColumns.SIZE,
@@ -378,6 +436,14 @@ class StorageFragment(
         var archivesSize = 0L
         var installPackagesSize = 0L
         var othersSize = 0L
+
+        var imagesCount = 0
+        var videosCount = 0
+        var audioCount = 0
+        var documentsCount = 0
+        var archivesCount = 0
+        var installPackagesCount = 0
+        var othersCount = 0
         try {
             context.queryCursor(uri, projection) { cursor ->
                 try {
@@ -389,21 +455,43 @@ class StorageFragment(
                             val path = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
                             if (!context.getIsPathDirectory(path)) {
                                 othersSize += size
+                                othersCount++
                             }
                         }
                         return@queryCursor
                     }
 
                     when (mimeType.substringBefore("/")) {
-                        "image" -> imagesSize += size
-                        "video" -> videosSize += size
-                        "audio" -> audioSize += size
-                        "text" -> documentsSize += size
+                        "image" -> {
+                            imagesSize += size
+                            imagesCount++
+                        }
+                        "video" -> {
+                            videosSize += size
+                            videosCount++
+                        }
+                        "audio" -> {
+                            audioSize += size
+                            audioCount++
+                        }
+                        "text" -> {
+                            documentsSize += size
+                            documentsCount++
+                        }
                         else -> {
                             when {
-                                extraDocumentMimeTypes.contains(mimeType) -> documentsSize += size
-                                extraAudioMimeTypes.contains(mimeType) -> audioSize += size
-                                installPackageMimeTypes.contains(mimeType) -> installPackagesSize += size
+                                extraDocumentMimeTypes.contains(mimeType) -> {
+                                    documentsSize += size
+                                    documentsCount++
+                                }
+                                extraAudioMimeTypes.contains(mimeType) -> {
+                                    audioSize += size
+                                    audioCount++
+                                }
+                                installPackageMimeTypes.contains(mimeType) -> {
+                                    installPackagesSize += size
+                                    installPackagesCount++
+                                }
                                 archiveMimeTypes.contains(mimeType) -> {
                                     // application/octet-stream is a generic fallback MIME type — only
                                     // count it as an archive if the filename actually looks like one,
@@ -413,14 +501,20 @@ class StorageFragment(
                                         val ext = path?.substringAfterLast('.', "")?.lowercase(Locale.getDefault())
                                         if (archiveExtensions.contains(ext)) {
                                             archivesSize += size
+                                            archivesCount++
                                         } else {
                                             othersSize += size
+                                            othersCount++
                                         }
                                     } else {
                                         archivesSize += size
+                                        archivesCount++
                                     }
                                 }
-                                else -> othersSize += size
+                                else -> {
+                                    othersSize += size
+                                    othersCount++
+                                }
                             }
                         }
                     }
@@ -440,7 +534,17 @@ class StorageFragment(
             put(OTHERS, othersSize)
         }
 
-        return mimeTypeSizes
+        val mimeTypeCounts = HashMap<String, Int>().apply {
+            put(IMAGES, imagesCount)
+            put(VIDEOS, videosCount)
+            put(AUDIO, audioCount)
+            put(DOCUMENTS, documentsCount)
+            put(ARCHIVES, archivesCount)
+            put(INSTALL_PACKAGES, installPackagesCount)
+            put(OTHERS, othersCount)
+        }
+
+        return Pair(mimeTypeSizes, mimeTypeCounts)
     }
 
     @SuppressLint("NewApi", "StringFormatInvalid")
@@ -469,7 +573,7 @@ class StorageFragment(
                 freeStorageSpace = file.freeSpace
             }
 
-            val filesSize = getSizesByMimeType(volumeName)
+            val (filesSize, fileCounts) = getSizesByMimeType(volumeName)
             val fileSizeImages = filesSize[IMAGES]!!
             val fileSizeVideos = filesSize[VIDEOS]!!
             val fileSizeAudios = filesSize[AUDIO]!!
@@ -477,6 +581,14 @@ class StorageFragment(
             val fileSizeArchives = filesSize[ARCHIVES]!!
             val fileSizeInstallPackages = filesSize[INSTALL_PACKAGES]!!
             val fileSizeOthers = filesSize[OTHERS]!!
+
+            val fileCountImages = fileCounts[IMAGES]!!
+            val fileCountVideos = fileCounts[VIDEOS]!!
+            val fileCountAudios = fileCounts[AUDIO]!!
+            val fileCountDocuments = fileCounts[DOCUMENTS]!!
+            val fileCountArchives = fileCounts[ARCHIVES]!!
+            val fileCountInstallPackages = fileCounts[INSTALL_PACKAGES]!!
+            val fileCountOthers = fileCounts[OTHERS]!!
 
             context.config.apply {
                 saveCachedCategorySize(volumeName, IMAGES, fileSizeImages)
@@ -488,6 +600,14 @@ class StorageFragment(
                 saveCachedCategorySize(volumeName, OTHERS, fileSizeOthers)
                 saveCachedCategorySize(volumeName, "total", totalStorageSpace)
                 saveCachedCategorySize(volumeName, "free", freeStorageSpace)
+
+                saveCachedCategoryCount(volumeName, IMAGES, fileCountImages)
+                saveCachedCategoryCount(volumeName, VIDEOS, fileCountVideos)
+                saveCachedCategoryCount(volumeName, AUDIO, fileCountAudios)
+                saveCachedCategoryCount(volumeName, DOCUMENTS, fileCountDocuments)
+                saveCachedCategoryCount(volumeName, ARCHIVES, fileCountArchives)
+                saveCachedCategoryCount(volumeName, INSTALL_PACKAGES, fileCountInstallPackages)
+                saveCachedCategoryCount(volumeName, OTHERS, fileCountOthers)
             }
 
             post {
@@ -495,12 +615,19 @@ class StorageFragment(
                     // Reuse the filesSize map computed above instead of calling getSizes(volumeName),
                     // which used to kick off a second, completely redundant full MediaStore scan.
                     imagesSize.text = fileSizeImages.formatSize()
+                    imagesLabel.text = categoryLabel(R.string.images, fileCountImages)
                     videosSize.text = fileSizeVideos.formatSize()
+                    videosLabel.text = categoryLabel(R.string.videos, fileCountVideos)
                     audioSize.text = fileSizeAudios.formatSize()
+                    audioLabel.text = categoryLabel(R.string.audio, fileCountAudios)
                     documentsSize.text = fileSizeDocuments.formatSize()
+                    documentsLabel.text = categoryLabel(R.string.documents, fileCountDocuments)
                     archivesSize.text = fileSizeArchives.formatSize()
+                    archivesLabel.text = categoryLabel(R.string.archives, fileCountArchives)
                     installPackagesSize.text = fileSizeInstallPackages.formatSize()
+                    installPackagesLabel.text = categoryLabel(R.string.install_packages, fileCountInstallPackages)
                     othersSize.text = fileSizeOthers.formatSize()
+                    othersLabel.text = categoryLabel(R.string.others, fileCountOthers)
 
                     totalSpace.text =
                         String.format(context.getString(R.string.storage_used), freeStorageSpace.formatSizeThousand(), totalStorageSpace.formatSizeThousand())
@@ -874,6 +1001,13 @@ class StorageFragment(
                 val storageVolumes = storageManager.storageVolumes
                 val userHandle: UserHandle = android.os.Process.myUserHandle()
 
+                context.config.saveCachedCategoryCount(volumeName, "apps", packages.size)
+                post {
+                    volumes[volumeName]?.apply {
+                        appsLabel.text = categoryLabel(R.string.apps, packages.size)
+                    }
+                }
+
                 var runningTotal = 0L
                 val chunkSize = 20 // run each app's (blocking) IPC query in parallel instead of one at a time
 
@@ -1035,3 +1169,4 @@ class StorageFragment(
 
     override fun myRecyclerView() = binding.storageNestedScrollview
 }
+               

@@ -11,21 +11,21 @@ import com.goodwy.filemanager.activities.SettingsActivity
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.helpers.OpenAppCategory
 
-// Returns every installed app package as (packageName, label) pairs, sorted by label. Excludes
-// this app itself (it wouldn't make sense to route a file back to our own file manager as its
-// own "default app"). This intentionally does NOT filter by mime-type support or by whether the
-// app has a launcher icon — some apps (e.g. certain media players/plugins) don't register in
-// ways those narrower queries pick up, so we enumerate every installed application directly.
-//
-// This walks every installed package and loads each one's label individually, which can take
-// a noticeable moment on a phone with a lot of apps installed — always call this off the main
-// thread (see showAppPickerForCategory / showManageOpenAppsFilterDialog below), never directly
-// from a click listener, or it can block the UI thread long enough to trigger an ANR.
-private fun SettingsActivity.getAllInstalledApps(): List<Pair<String, String>> {
+// In-memory cache of every installed app's (packageName, label), built once per process rather
+// than re-walking every installed package on every tap. Enumerating + loading each app's label
+// is what made the picker feel slow (and once even blocked the UI thread long enough to ANR
+// before this was moved to a background thread) — caching means only the very first lookup in
+// a session pays that cost; every row tap after that reads from memory and opens instantly.
+// Cleared only by clearInstalledAppsCache() below, called when the set of installed apps could
+// plausibly have changed (see prefetchInstalledAppsCache()'s call site in SettingsActivity).
+private var installedAppsCache: List<Pair<String, String>>? = null
+
+private fun SettingsActivity.loadAllInstalledApps(): List<Pair<String, String>> {
     val pm = packageManager
     return try {
-        @Suppress("DEPRECATION")
-        pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        // MATCH_UNINSTALLED_PACKAGES/GET_META_DATA aren't needed here (we only read the label),
+        // and skipping them avoids extra per-package work that isn't used for anything.
+        pm.getInstalledApplications(0)
             .asSequence()
             .map { it.packageName }
             .filter { it != packageName }
@@ -42,6 +42,34 @@ private fun SettingsActivity.getAllInstalledApps(): List<Pair<String, String>> {
             .toList()
     } catch (e: Exception) {
         emptyList()
+    }
+}
+
+// Returns every installed app package as (packageName, label) pairs, sorted by label, using the
+// in-memory cache above when it's already been built. Excludes this app itself (it wouldn't make
+// sense to route a file back to our own file manager as its own "default app").
+//
+// Still potentially slow the very first time it's called in a session — always call this off the
+// main thread (see showAppPickerForCategory / showManageOpenAppsFilterDialog below), never
+// directly from a click listener, or it can block the UI thread long enough to trigger an ANR.
+private fun SettingsActivity.getAllInstalledApps(): List<Pair<String, String>> {
+    installedAppsCache?.let { return it }
+    val apps = loadAllInstalledApps()
+    installedAppsCache = apps
+    return apps
+}
+
+// Kicks off building the installed-apps cache in the background as soon as Settings opens,
+// instead of waiting for the user's first tap — by the time they actually open a category
+// picker, the list is very likely already sitting in memory ready to go. Safe to call
+// repeatedly (e.g. every onResume): it's a no-op once the cache is already populated.
+fun SettingsActivity.prefetchInstalledAppsCache() {
+    if (installedAppsCache != null) {
+        return
+    }
+
+    ensureBackgroundThread {
+        getAllInstalledApps()
     }
 }
 
@@ -75,14 +103,14 @@ fun SettingsActivity.getDefaultOpenAppLabel(category: OpenAppCategory): String {
 // apps (see getCandidateApps above), lets the user pick one (or "ask every time" to clear the
 // preference), and saves the choice — scoped to this app only.
 //
-// Building that candidate list walks every installed app, which can take a moment — done on a
-// background thread so tapping the row doesn't freeze the UI, with the dialog itself shown back
-// on the main thread once the list is ready.
+// Reads from the cache built by prefetchInstalledAppsCache() when possible (near-instant); still
+// routed through a background thread as a safety net for the rare case the cache isn't ready yet,
+// with the dialog itself shown back on the main thread once the list is available.
 fun SettingsActivity.showAppPickerForCategory(category: OpenAppCategory, onSaved: () -> Unit) {
     ensureBackgroundThread {
         val candidates = getCandidateApps(category)
         runOnUiThread {
-            if (isDestroyed || isFinishing) {
+            if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
                 return@runOnUiThread
             }
 
@@ -114,12 +142,13 @@ fun SettingsActivity.showAppPickerForCategory(category: OpenAppCategory, onSaved
 // they actually use, so finding the right one later is quick. Checking nothing at all is treated
 // the same as "no filter set up" (i.e. shows everything again), rather than an empty picker.
 //
-// Same background-thread treatment as showAppPickerForCategory above, for the same reason.
+// Same cache + background-thread treatment as showAppPickerForCategory above, for the same
+// reasons.
 fun SettingsActivity.showManageOpenAppsFilterDialog() {
     ensureBackgroundThread {
         val allApps = getAllInstalledApps()
         runOnUiThread {
-            if (isDestroyed || isFinishing) {
+            if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
                 return@runOnUiThread
             }
 

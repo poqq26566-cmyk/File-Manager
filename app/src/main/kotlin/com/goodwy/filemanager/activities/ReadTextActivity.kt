@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.util.Base64
+import android.util.TypedValue
 import android.view.inputmethod.EditorInfo
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -64,6 +65,8 @@ class ReadTextActivity : SimpleActivity() {
         searchPrevBtn = findViewById(R.id.search_previous)
         searchNextBtn = findViewById(R.id.search_next)
         searchClearBtn = findViewById(R.id.search_clear)
+
+        setupLineNumbers()
 
         if (checkAppSideloading()) {
             return
@@ -413,6 +416,52 @@ class ReadTextActivity : SimpleActivity() {
             editText.setSelection(searchMatches.getOrNull(searchIndex) ?: 0)
         } else {
             hideKeyboard()
+        }
+    }
+
+    private fun setupLineNumbers() {
+        binding.lineNumbersView.setTextColor(getProperTextColor().adjustAlpha(0.4f))
+
+        // the text view can reflow (typing, wrapping, pinch-zoom from GestureEditText) without
+        // firing a text-changed event we listen to, so recompute on every layout pass instead;
+        // updateLineNumbers() is a no-op once the numbers already match, so this settles quickly
+        binding.readTextView.viewTreeObserver.addOnGlobalLayoutListener {
+            updateLineNumbers()
+        }
+    }
+
+    private fun updateLineNumbers() {
+        val editText = binding.readTextView
+
+        if (binding.lineNumbersView.textSize != editText.textSize) {
+            binding.lineNumbersView.setTextSize(TypedValue.COMPLEX_UNIT_PX, editText.textSize)
+        }
+
+        val layout = editText.layout ?: return
+        val text = editText.text?.toString() ?: ""
+        val lines = text.split("\n")
+
+        val numbers = StringBuilder()
+        var charIndex = 0
+        for ((index, lineText) in lines.withIndex()) {
+            val lineStart = charIndex.coerceAtMost(text.length)
+            val lineEnd = (charIndex + lineText.length).coerceAtMost(text.length)
+            val firstVisualLine = layout.getLineForOffset(lineStart)
+            val lastVisualLine = layout.getLineForOffset(lineEnd)
+            val wrappedVisualLines = (lastVisualLine - firstVisualLine + 1).coerceAtLeast(1)
+
+            numbers.append(index + 1)
+            repeat(wrappedVisualLines - 1) { numbers.append('\n') }
+            if (index < lines.lastIndex) {
+                numbers.append('\n')
+            }
+
+            charIndex += lineText.length + 1
+        }
+
+        val newNumbers = numbers.toString()
+        if (binding.lineNumbersView.text.toString() != newNumbers) {
+            binding.lineNumbersView.text = newNumbers
         }
     }
 }

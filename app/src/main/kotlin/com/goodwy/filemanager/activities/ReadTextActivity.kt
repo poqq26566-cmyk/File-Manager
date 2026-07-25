@@ -437,29 +437,10 @@ class ReadTextActivity : SimpleActivity() {
             binding.lineNumbersView.setTextSize(TypedValue.COMPLEX_UNIT_PX, editText.textSize)
         }
 
-        val layout = editText.layout ?: return
-        val text = editText.text?.toString() ?: ""
-        val lines = text.split("\n")
-
-        val numbers = StringBuilder()
-        var charIndex = 0
-        for ((index, lineText) in lines.withIndex()) {
-            val lineStart = charIndex.coerceAtMost(text.length)
-            val lineEnd = (charIndex + lineText.length).coerceAtMost(text.length)
-            val firstVisualLine = layout.getLineForOffset(lineStart)
-            val lastVisualLine = layout.getLineForOffset(lineEnd)
-            val wrappedVisualLines = (lastVisualLine - firstVisualLine + 1).coerceAtLeast(1)
-
-            numbers.append(index + 1)
-            repeat(wrappedVisualLines - 1) { numbers.append('\n') }
-            if (index < lines.lastIndex) {
-                numbers.append('\n')
-            }
-
-            charIndex += lineText.length + 1
-        }
-
-        val newNumbers = numbers.toString()
+        // number every rendered row consecutively (including wrapped continuation rows),
+        // so the gutter is always a plain 1, 2, 3... with no blank/skipped rows
+        val lineCount = editText.lineCount.coerceAtLeast(1)
+        val newNumbers = (1..lineCount).joinToString("\n")
         if (binding.lineNumbersView.text.toString() != newNumbers) {
             binding.lineNumbersView.text = newNumbers
         }

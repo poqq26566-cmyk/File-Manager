@@ -137,5 +137,6 @@ class DecompressItemsAdapter(activity: SimpleActivity, var listItems: MutableLis
         folderDrawable.alpha = 180
         fileDrawable = resources.getDrawable(R.drawable.ic_file_generic)
         fileDrawables = getFilePlaceholderDrawables(activity)
+        fileDrawables["apk"] = resources.getColoredDrawableWithColor(R.drawable.ic_android, activity.getColor(R.color.green_ios))
     }
 }

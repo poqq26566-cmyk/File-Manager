@@ -16,6 +16,8 @@ import com.goodwy.filemanager.BuildConfig
 import com.goodwy.filemanager.R
 import com.goodwy.filemanager.databinding.ActivitySettingsBinding
 import com.goodwy.filemanager.dialogs.ManageVisibleTabsDialog
+import com.goodwy.filemanager.dialogs.getDefaultOpenAppLabel
+import com.goodwy.filemanager.dialogs.showAppPickerForCategory
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.extensions.launchAbout
 import com.goodwy.filemanager.extensions.pixels
@@ -78,6 +80,8 @@ class SettingsActivity : SimpleActivity() {
         setupPurchaseThankYou()
         setupCustomizeColors()
         setupFloatingButtonStyle()
+
+        setupDefaultOpenApps()
 
         setupDefaultFolder()
         setupManageFavorites()
@@ -273,6 +277,30 @@ class SettingsActivity : SimpleActivity() {
     private fun setupManageShownTabs() {
         binding.settingsManageShownTabsHolder.setOnClickListener {
             ManageVisibleTabsDialog(this)
+        }
+    }
+
+    private fun setupDefaultOpenApps() {
+        val categories = defaultOpenAppCategories()
+        val rows = mapOf(
+            OPEN_CATEGORY_TEXT to Pair(binding.settingsDefaultOpenTextHolder, binding.settingsDefaultOpenTextValue),
+            OPEN_CATEGORY_IMAGE to Pair(binding.settingsDefaultOpenImageHolder, binding.settingsDefaultOpenImageValue),
+            OPEN_CATEGORY_AUDIO to Pair(binding.settingsDefaultOpenAudioHolder, binding.settingsDefaultOpenAudioValue),
+            OPEN_CATEGORY_VIDEO to Pair(binding.settingsDefaultOpenVideoHolder, binding.settingsDefaultOpenVideoValue),
+            OPEN_CATEGORY_PDF to Pair(binding.settingsDefaultOpenPdfHolder, binding.settingsDefaultOpenPdfValue),
+            OPEN_CATEGORY_WORD to Pair(binding.settingsDefaultOpenWordHolder, binding.settingsDefaultOpenWordValue),
+            OPEN_CATEGORY_EXCEL to Pair(binding.settingsDefaultOpenExcelHolder, binding.settingsDefaultOpenExcelValue),
+            OPEN_CATEGORY_PPT to Pair(binding.settingsDefaultOpenPptHolder, binding.settingsDefaultOpenPptValue),
+        )
+
+        categories.forEach { category ->
+            val (holder, valueView) = rows[category.key] ?: return@forEach
+            valueView.text = getDefaultOpenAppLabel(category)
+            holder.setOnClickListener {
+                showAppPickerForCategory(category) {
+                    valueView.text = getDefaultOpenAppLabel(category)
+                }
+            }
         }
     }
 

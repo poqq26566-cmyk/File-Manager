@@ -80,4 +80,17 @@
     <string name="press_back_twice">Require pressing Back twice to leave the app</string>
     <string name="storage_scan_notification_channel">Storage scan</string>
 <string name="storage_scan_notification_title">Scanning storage…</string>
+
+    <!-- Default open apps (app-scoped, not the system-wide default apps) -->
+    <string name="default_open_apps">Default open apps</string>
+    <string name="default_open_app_not_set">Not set (ask every time)</string>
+    <string name="default_open_app_ask_everytime">Ask every time</string>
+    <string name="category_text">Text documents</string>
+    <string name="category_image">Photos</string>
+    <string name="category_audio">Music</string>
+    <string name="category_video">Video</string>
+    <string name="category_pdf">PDF documents</string>
+    <string name="category_word">Word documents</string>
+    <string name="category_excel">Excel spreadsheets</string>
+    <string name="category_ppt">PowerPoint presentations</string>
 </resources>

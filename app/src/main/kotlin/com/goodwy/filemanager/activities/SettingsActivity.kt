@@ -18,6 +18,7 @@ import com.goodwy.filemanager.databinding.ActivitySettingsBinding
 import com.goodwy.filemanager.dialogs.ManageVisibleTabsDialog
 import com.goodwy.filemanager.dialogs.getDefaultOpenAppLabel
 import com.goodwy.filemanager.dialogs.showAppPickerForCategory
+import com.goodwy.filemanager.dialogs.showManageOpenAppsFilterDialog
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.extensions.launchAbout
 import com.goodwy.filemanager.extensions.pixels
@@ -130,6 +131,22 @@ class SettingsActivity : SimpleActivity() {
 
         binding.apply {
             arrayOf(
+                settingsAppearanceLabel,
+                settingsGeneralLabel,
+                settingsTabsLabel,
+                settingsSwipeGesturesLabel,
+                settingsFileOperationsLabel,
+                settingsSecurityLabel,
+                settingsTopAppBarLabel,
+                settingsListViewLabel,
+                settingsOtherLabel
+            ).forEach {
+                it.setTextColor(getProperPrimaryColor())
+            }
+        }
+
+        binding.apply {
+            arrayOf(
                 settingsDefaultOpenAppsHolder,
                 settingsColorCustomizationHolder,
                 settingsGeneralHolder,
@@ -147,23 +164,8 @@ class SettingsActivity : SimpleActivity() {
 
         binding.apply {
             arrayOf(
-                settingsColorCustomizationHolder,
-                settingsGeneralHolder,
-                settingsTabsHolder,
-                settingsSwipeGesturesHolder,
-                settingsFileOperationsHolder,
-                settingsSecurityHolder,
-                settingsTopAppBarHolder,
-                settingsListViewHolder,
-                settingsOtherHolder
-            ).forEach {
-                it.setCardBackgroundColor(getSurfaceColor())
-            }
-        }
-
-        binding.apply {
-            arrayOf(
                 settingsCustomizeColorsChevron,
+                settingsFilterOpenAppsChevron,
                 settingsManageShownTabsChevron,
                 settingsManageFavoritesChevron,
                 settingsChangeDateTimeFormatChevron,
@@ -302,6 +304,10 @@ class SettingsActivity : SimpleActivity() {
                     valueView.text = getDefaultOpenAppLabel(category)
                 }
             }
+        }
+
+        binding.settingsFilterOpenAppsHolder.setOnClickListener {
+            showManageOpenAppsFilterDialog()
         }
     }
 

@@ -11,6 +11,7 @@ import java.util.Locale
 class Config(context: Context) : BaseConfig(context) {
     companion object {
         fun newInstance(context: Context) = Config(context)
+        private const val ENTRY_SEPARATOR = "\u0001"
     }
 
     var showHidden: Boolean
@@ -237,10 +238,6 @@ class Config(context: Context) : BaseConfig(context) {
     // app restarts too), instead of on every cold app launch. Stored as "pkg\u0001label" entries
     // (an ASCII control character as separator, since app labels can contain almost anything a
     // pipe/comma/etc. delimiter might collide with, but never that character).
-    private companion object {
-        const val ENTRY_SEPARATOR = "\u0001"
-    }
-
     var cachedInstalledApps: List<Pair<String, String>>
         get() {
             val raw = prefs.getStringSet(CACHED_INSTALLED_APPS, null) ?: return emptyList()

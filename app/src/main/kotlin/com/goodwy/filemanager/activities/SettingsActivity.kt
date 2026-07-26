@@ -113,6 +113,7 @@ class SettingsActivity : SimpleActivity() {
         setupAppPasswordProtection()
         setupFileDeletionPasswordProtection()
         setupEnableRootAccess()
+        setupAutoTrashDevFiles()
 
         setupOverflowIcon()
         setupShowSearchBar()
@@ -137,6 +138,7 @@ class SettingsActivity : SimpleActivity() {
                 settingsSwipeGesturesLabel,
                 settingsFileOperationsLabel,
                 settingsSecurityLabel,
+                settingsAutoCleanupLabel,
                 settingsTopAppBarLabel,
                 settingsListViewLabel,
                 settingsOtherLabel
@@ -154,6 +156,7 @@ class SettingsActivity : SimpleActivity() {
                 settingsSwipeGesturesHolder,
                 settingsFileOperationsHolder,
                 settingsSecurityHolder,
+                settingsAutoCleanupHolder,
                 settingsTopAppBarHolder,
                 settingsListViewHolder,
                 settingsOtherHolder
@@ -744,6 +747,16 @@ class SettingsActivity : SimpleActivity() {
     private fun toggleRootAccess(enable: Boolean) {
         binding.settingsEnableRootAccess.isChecked = enable
         config.enableRootAccess = enable
+    }
+
+    private fun setupAutoTrashDevFiles() {
+        binding.apply {
+            settingsAutoTrashDevFiles.isChecked = config.autoTrashDevFiles
+            settingsAutoTrashDevFilesHolder.setOnClickListener {
+                settingsAutoTrashDevFiles.toggle()
+                config.autoTrashDevFiles = settingsAutoTrashDevFiles.isChecked
+            }
+        }
     }
 
     private fun setupQueryLimitRecent() {

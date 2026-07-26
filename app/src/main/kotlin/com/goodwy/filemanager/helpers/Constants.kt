@@ -16,6 +16,7 @@ const val EXTRA_OPEN_PATH = "extra_open_path"
 // happens when a file of that category is opened from within this file manager.
 const val PREFIX_DEFAULT_OPEN_APP = "default_open_app_"
 const val DEFAULT_OPEN_APPS_FILTER = "default_open_apps_filter"
+const val CACHED_INSTALLED_APPS = "cached_installed_apps"
 
 const val OPEN_CATEGORY_TEXT = "text"
 const val OPEN_CATEGORY_IMAGE = "image"

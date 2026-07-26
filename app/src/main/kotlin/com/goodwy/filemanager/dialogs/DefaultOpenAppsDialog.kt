@@ -37,6 +37,13 @@ private fun SettingsActivity.loadAllInstalledApps(): List<Pair<String, String>> 
             .asSequence()
             .map { it.packageName }
             .filter { it != packageName }
+            // Only keep packages that actually have a launchable entry point (an icon you'd
+            // see in an app drawer / "open with" list). This is what filters out the hundreds
+            // of invisible system-internal packages (resource overlays, network stack services,
+            // permission controller overlays, etc.) that getInstalledApplications() otherwise
+            // returns right alongside real apps — none of those are ever something the user
+            // would pick to open a file with.
+            .filter { pm.getLaunchIntentForPackage(it) != null }
             .distinct()
             .mapNotNull { pkg ->
                 try {

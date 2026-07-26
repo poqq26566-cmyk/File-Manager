@@ -5,6 +5,7 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.goodwy.commons.extensions.toast
 import com.goodwy.filemanager.extensions.config
 import java.util.Collections
 import java.util.concurrent.TimeUnit
@@ -41,6 +42,7 @@ object DevFileAutoTrash {
             return
         }
 
+        var scheduledCount = 0
         for (path in filePaths) {
             val extension = path.substringAfterLast('.', "").lowercase()
             if (extension !in TRACKED_EXTENSIONS) {
@@ -51,6 +53,11 @@ object DevFileAutoTrash {
                 continue
             }
             scheduleAutoTrash(appContext, path)
+            scheduledCount++
+        }
+
+        if (scheduledCount > 0) {
+            appContext.toast("自动清理：检测到 $scheduledCount 个新的开发文件，1 分钟后自动移入回收站")
         }
     }
 

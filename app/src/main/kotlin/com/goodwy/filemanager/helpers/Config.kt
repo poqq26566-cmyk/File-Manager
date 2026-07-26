@@ -229,4 +229,28 @@ class Config(context: Context) : BaseConfig(context) {
     var defaultOpenAppsFilter: Set<String>
         get() = prefs.getStringSet(DEFAULT_OPEN_APPS_FILTER, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(DEFAULT_OPEN_APPS_FILTER, value).apply()
+
+    // Persisted cache of every installed app's (packageName, label), built by enumerating every
+    // installed package — a genuinely slow operation on a phone with a lot of apps, made slower
+    // still by deliberately running it at low thread priority to avoid ANRs (see
+    // DefaultOpenAppsDialog.kt). Persisting it means that cost is only paid once ever (across
+    // app restarts too), instead of on every cold app launch. Stored as "pkg\u0001label" entries
+    // (an ASCII control character as separator, since app labels can contain almost anything a
+    // pipe/comma/etc. delimiter might collide with, but never that character).
+    private companion object {
+        const val ENTRY_SEPARATOR = "\u0001"
+    }
+
+    var cachedInstalledApps: List<Pair<String, String>>
+        get() {
+            val raw = prefs.getStringSet(CACHED_INSTALLED_APPS, null) ?: return emptyList()
+            return raw.mapNotNull { entry ->
+                val parts = entry.split(ENTRY_SEPARATOR, limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else null
+            }
+        }
+        set(value) {
+            val raw = value.map { (pkg, label) -> "$pkg$ENTRY_SEPARATOR$label" }.toHashSet()
+            prefs.edit().putStringSet(CACHED_INSTALLED_APPS, raw).apply()
+        }
 }

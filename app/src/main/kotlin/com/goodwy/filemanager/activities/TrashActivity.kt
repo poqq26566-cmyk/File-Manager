@@ -5,12 +5,20 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.signature.ObjectKey
 import com.goodwy.commons.dialogs.ConfirmationDialog
 import com.goodwy.commons.extensions.beGone
 import com.goodwy.commons.extensions.beVisible
 import com.goodwy.commons.extensions.beVisibleIf
 import com.goodwy.commons.extensions.formatDate
 import com.goodwy.commons.extensions.formatSize
+import com.goodwy.commons.extensions.getFilePlaceholderDrawables
 import com.goodwy.commons.extensions.getProperTextColor
 import com.goodwy.commons.extensions.getTimeFormat
 import com.goodwy.commons.extensions.toast
@@ -24,10 +32,12 @@ import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.helpers.TrashEntry
 import com.goodwy.filemanager.helpers.TrashManager
 import java.io.File
+import java.util.Locale
 
 class TrashActivity : SimpleActivity() {
     private val binding by viewBinding(ActivityTrashBinding::inflate)
     private var entries = listOf<TrashEntry>()
+    private val fileDrawables by lazy { getFilePlaceholderDrawables(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         useChangeAutoTheme = false
@@ -141,12 +151,38 @@ class TrashActivity : SimpleActivity() {
             val iconColor = getProperTextColor()
             holder.itemBinding.apply {
                 trashItemName.text = name
-                trashItemIcon.setImageResource(if (entry.isDirectory) R.drawable.ic_folder_vector else R.drawable.ic_file_vector)
-                trashItemIcon.setColorFilter(iconColor)
                 trashItemRestore.setColorFilter(iconColor)
                 trashItemDelete.setColorFilter(iconColor)
                 val dateText = entry.deletedAt.formatDate(this@TrashActivity, config.dateFormat, getTimeFormat())
                 trashItemSubtitle.text = "${entry.size.formatSize()} · $dateText"
+
+                Glide.with(this@TrashActivity).clear(trashItemIcon)
+                trashItemIcon.clearColorFilter()
+
+                if (entry.isDirectory) {
+                    // 文件夹本身没有缩略图，用固定图标即可
+                    trashItemIcon.setImageResource(R.drawable.ic_folder_vector)
+                    trashItemIcon.setColorFilter(iconColor)
+                } else {
+                    // 缩略图必须从回收站里的真实物理文件加载，因为原路径上的文件已经不存在了
+                    val trashFile = TrashManager.trashFile(this@TrashActivity, entry)
+                    val fallback = fileDrawables.getOrElse(
+                        key = name.substringAfterLast('.').lowercase(Locale.getDefault()),
+                        defaultValue = { resources.getDrawable(R.drawable.ic_file_vector, theme) }
+                    )
+
+                    val options = RequestOptions()
+                        .signature(ObjectKey(entry.trashFileName))
+                        .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                        .error(fallback)
+                        .transform(CenterCrop(), RoundedCorners(20))
+
+                    Glide.with(this@TrashActivity)
+                        .load(trashFile)
+                        .transition(DrawableTransitionOptions.withCrossFade())
+                        .apply(options)
+                        .into(trashItemIcon)
+                }
 
                 trashItemRestore.setOnClickListener { restoreEntry(entry) }
                 trashItemDelete.setOnClickListener { deleteEntryForever(entry) }

@@ -80,6 +80,8 @@
     <!-- Settings -->
     <string name="enable_root_access">Enable root access</string>
     <string name="press_back_twice">Require pressing Back twice to leave the app</string>
+    <string name="auto_cleanup">Auto cleanup</string>
+    <string name="auto_trash_dev_files">Auto-move new .kt/.java/.xml files to trash after 1 minute</string>
     <string name="storage_scan_notification_channel">Storage scan</string>
 <string name="storage_scan_notification_title">Scanning storage…</string>
 

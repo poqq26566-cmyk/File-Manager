@@ -1,7 +1,20 @@
 package com.goodwy.filemanager.dialogs
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Process
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.BaseAdapter
+import android.widget.CheckedTextView
+import android.widget.EditText
+import android.widget.Filter
+import android.widget.Filterable
+import android.widget.LinearLayout
+import android.widget.ListView
 import com.goodwy.commons.dialogs.RadioGroupDialog
 import com.goodwy.commons.extensions.getAlertDialogBuilder
 import com.goodwy.commons.extensions.toast
@@ -134,10 +147,66 @@ fun SettingsActivity.showAppPickerForCategory(category: OpenAppCategory, onSaved
     }
 }
 
+// One row in the searchable checklist below: a package, its label, and whether it's currently
+// checked. `checked` is mutated in place as the user taps rows, independent of list position,
+// so toggling state survives the list being filtered (and re-filtered) by the search box.
+private class FilterableAppEntry(val pkg: String, val label: String, var checked: Boolean)
+
+// Backs the search box + checklist in showManageOpenAppsFilterDialog(). Filtering narrows which
+// entries are shown (by label, case-insensitive substring match) without touching the checked
+// state of any entry — including ones currently scrolled out of view by the filter.
+private class FilterableAppAdapter(
+    context: Context,
+    private val allEntries: List<FilterableAppEntry>
+) : BaseAdapter(), Filterable {
+
+    var filteredEntries: List<FilterableAppEntry> = allEntries
+        private set
+
+    private val inflater = LayoutInflater.from(context)
+
+    override fun getCount() = filteredEntries.size
+    override fun getItem(position: Int): FilterableAppEntry = filteredEntries[position]
+    override fun getItemId(position: Int) = position.toLong()
+
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+        val view = (convertView as? CheckedTextView)
+            ?: (inflater.inflate(android.R.layout.simple_list_item_multiple_choice, parent, false) as CheckedTextView)
+        val entry = filteredEntries[position]
+        view.text = entry.label
+        view.isChecked = entry.checked
+        return view
+    }
+
+    override fun getFilter(): Filter = object : Filter() {
+        override fun performFiltering(constraint: CharSequence?): FilterResults {
+            val query = constraint?.toString()?.trim()?.lowercase().orEmpty()
+            val matches = if (query.isEmpty()) {
+                allEntries
+            } else {
+                allEntries.filter { it.label.lowercase().contains(query) }
+            }
+            return FilterResults().apply {
+                values = matches
+                count = matches.size
+            }
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+            filteredEntries = (results?.values as? List<FilterableAppEntry>) ?: allEntries
+            notifyDataSetChanged()
+        }
+    }
+}
+
 // Lets the user check/uncheck which installed apps should even be offered as candidates in the
 // category pickers above — narrows a long "every installed app" list down to just the handful
 // they actually use, so finding the right one later is quick. Checking nothing at all is treated
 // the same as "no filter set up" (i.e. shows everything again), rather than an empty picker.
+//
+// Includes a search box above the list — with potentially hundreds of installed apps, scrolling
+// to find one by hand isn't practical.
 fun SettingsActivity.showManageOpenAppsFilterDialog() {
     toast(com.goodwy.commons.R.string.loading)
     runLowPriorityInBackground {
@@ -153,18 +222,51 @@ fun SettingsActivity.showManageOpenAppsFilterDialog() {
             }
 
             val currentFilter = config.defaultOpenAppsFilter
-            val checkedItems = BooleanArray(allApps.size) { currentFilter.contains(allApps[it].first) }
-            val labels = allApps.map { it.second }.toTypedArray()
+            val entries = allApps.map { (pkg, label) -> FilterableAppEntry(pkg, label, currentFilter.contains(pkg)) }
+            val adapter = FilterableAppAdapter(this, entries)
+
+            val density = resources.displayMetrics.density
+            val horizontalPadding = (20 * density).toInt()
+            val verticalPadding = (12 * density).toInt()
+
+            val searchBox = EditText(this).apply {
+                hint = getString(com.goodwy.commons.R.string.search)
+                isSingleLine = true
+                setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding)
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        adapter.filter.filter(s)
+                    }
+
+                    override fun afterTextChanged(s: Editable?) {}
+                })
+            }
+
+            val listView = ListView(this).apply {
+                this.adapter = adapter
+                choiceMode = ListView.CHOICE_MODE_MULTIPLE
+                setOnItemClickListener { _, view, position, _ ->
+                    val entry = adapter.filteredEntries[position]
+                    entry.checked = !entry.checked
+                    (view as? CheckedTextView)?.isChecked = entry.checked
+                }
+            }
+
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(searchBox)
+                addView(
+                    listView,
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (360 * density).toInt())
+                )
+            }
 
             getAlertDialogBuilder()
                 .setTitle(R.string.filter_open_apps)
-                .setMultiChoiceItems(labels, checkedItems) { _, which, isChecked ->
-                    checkedItems[which] = isChecked
-                }
+                .setView(container)
                 .setPositiveButton(com.goodwy.commons.R.string.ok) { _, _ ->
-                    val newFilter = allApps.filterIndexed { index, _ -> checkedItems[index] }
-                        .map { it.first }
-                        .toHashSet()
+                    val newFilter = entries.filter { it.checked }.map { it.pkg }.toHashSet()
                     config.defaultOpenAppsFilter = newFilter
                 }
                 .setNegativeButton(com.goodwy.commons.R.string.cancel, null)

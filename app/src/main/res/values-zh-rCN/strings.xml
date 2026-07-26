@@ -69,6 +69,8 @@
     <string name="total_storage">总存储：%s</string>
     <string name="enable_root_access">启用 root 访问</string>
     <string name="press_back_twice">需要按两次返回键才能离开应用</string>
+    <string name="auto_cleanup">自动清理</string>
+    <string name="auto_trash_dev_files">自动将新出现的 .kt/.java/.xml 文件在 1 分钟后移入回收站</string>
 
     <!-- 默认打开方式（仅在本应用内生效，不修改系统默认应用） -->
     <string name="default_open_apps">默认打开方式</string>

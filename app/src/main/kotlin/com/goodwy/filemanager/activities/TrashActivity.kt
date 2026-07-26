@@ -18,7 +18,6 @@ import com.goodwy.commons.extensions.beVisible
 import com.goodwy.commons.extensions.beVisibleIf
 import com.goodwy.commons.extensions.formatDate
 import com.goodwy.commons.extensions.formatSize
-import com.goodwy.commons.extensions.getFilePlaceholderDrawables
 import com.goodwy.commons.extensions.getProperTextColor
 import com.goodwy.commons.extensions.getTimeFormat
 import com.goodwy.commons.extensions.toast
@@ -32,12 +31,10 @@ import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.helpers.TrashEntry
 import com.goodwy.filemanager.helpers.TrashManager
 import java.io.File
-import java.util.Locale
 
 class TrashActivity : SimpleActivity() {
     private val binding by viewBinding(ActivityTrashBinding::inflate)
     private var entries = listOf<TrashEntry>()
-    private val fileDrawables by lazy { getFilePlaceholderDrawables(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         useChangeAutoTheme = false
@@ -166,10 +163,7 @@ class TrashActivity : SimpleActivity() {
                 } else {
                     // 缩略图必须从回收站里的真实物理文件加载，因为原路径上的文件已经不存在了
                     val trashFile = TrashManager.trashFile(this@TrashActivity, entry)
-                    val fallback = fileDrawables.getOrElse(
-                        key = name.substringAfterLast('.').lowercase(Locale.getDefault()),
-                        defaultValue = { resources.getDrawable(R.drawable.ic_file_vector, theme) }
-                    )
+                    val fallback = resources.getDrawable(R.drawable.ic_file_vector, theme)
 
                     val options = RequestOptions()
                         .signature(ObjectKey(entry.trashFileName))

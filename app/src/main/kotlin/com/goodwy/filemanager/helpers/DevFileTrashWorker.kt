@@ -3,6 +3,7 @@ package com.goodwy.filemanager.helpers
 import android.content.Context
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.goodwy.commons.extensions.toast
 import com.goodwy.commons.models.FileDirItem
 import com.goodwy.filemanager.extensions.config
 import java.io.File
@@ -25,6 +26,7 @@ class DevFileTrashWorker(context: Context, params: WorkerParameters) : Worker(co
 
         // 用户可能在这 1 分钟内又把开关关掉了，尊重最新设置，不做任何操作
         if (!context.config.autoTrashDevFiles) {
+            context.toast("自动清理：开关已关闭，跳过 ${File(path).name}")
             return Result.success()
         }
 
@@ -38,7 +40,13 @@ class DevFileTrashWorker(context: Context, params: WorkerParameters) : Worker(co
                 file.length(),
                 file.lastModified()
             )
-            TrashManager.moveToTrash(context, item)
+            val success = TrashManager.moveToTrash(context, item)
+            context.toast(
+                if (success) "自动清理：已把 ${file.name} 移入回收站"
+                else "自动清理：移动 ${file.name} 失败"
+            )
+        } else {
+            context.toast("自动清理：${file.name} 已经不在原位置了，跳过")
         }
 
         return Result.success()

@@ -101,6 +101,12 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(ENABLE_ROOT_ACCESS, false)
         set(enableRootAccess) = prefs.edit().putBoolean(ENABLE_ROOT_ACCESS, enableRootAccess).apply()
 
+    // 关闭：不做任何处理。开启后，文件管理器每次列出目录时，若发现之前没见过的
+    // .kt / .java / .xml 后缀文件，会在 1 分钟后自动把它移入回收站（见 DevFileAutoTrash）。
+    var autoTrashDevFiles: Boolean
+        get() = prefs.getBoolean(AUTO_TRASH_DEV_FILES, false)
+        set(autoTrashDevFiles) = prefs.edit().putBoolean(AUTO_TRASH_DEV_FILES, autoTrashDevFiles).apply()
+
     var editorTextZoom: Float
         get() = prefs.getFloat(EDITOR_TEXT_ZOOM, 1.2f)
         set(editorTextZoom) = prefs.edit().putFloat(EDITOR_TEXT_ZOOM, editorTextZoom).apply()

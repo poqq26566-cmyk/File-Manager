@@ -32,6 +32,16 @@ object TrashManager {
         return dir
     }
 
+    /**
+     * The actual physical location of a trashed item on disk (inside the app-private trash
+     * directory), as opposed to [TrashEntry.originalPath] which points to where it used to live
+     * before being deleted. Thumbnails must be loaded from this path, since the original file no
+     * longer exists there.
+     */
+    fun trashFile(context: Context, entry: TrashEntry): File {
+        return File(trashDir(context), entry.trashFileName)
+    }
+
     fun moveToTrash(context: Context, item: FileDirItem): Boolean {
         return try {
             val source = File(item.path)

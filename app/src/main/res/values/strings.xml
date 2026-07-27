@@ -9,6 +9,10 @@
     <string name="home_folder_updated">Home folder updated</string>
     <string name="menu_copy_text">Copy</string>
     <string name="copy_path">Copy path to clipboard</string>
+    <string name="filter_folders">Filter folders</string>
+    <string name="manage_excluded_folders">Manage filtered folders</string>
+    <string name="add_excluded_folder">Add folder</string>
+    <string name="excluded_folders_placeholder">No filtered folders yet. Folders you add here will be hidden from all file lists and the storage overview.</string>
     <string name="path_copied">Path copied</string>
     <string name="select_audio_file">Please select an audio file</string>
     <string name="search_folder">Search folder</string>

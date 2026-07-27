@@ -1,5 +1,7 @@
 package com.goodwy.filemanager.extensions
 
+import android.content.Context
+
 fun String.isZipFile() = endsWith(".zip", true)
 
 fun String.isPathInHiddenFolder(): Boolean {
@@ -30,3 +32,24 @@ fun String.isPathInExcludedFolder(): Boolean {
     }
     return false
 }
+
+// User-managed version of the check above (Settings > 安全性 > 过滤文件夹): folders the user has
+// explicitly picked are excluded the same way "vault" is, but only while the toggle is on. A path
+// counts as excluded if it IS one of the picked folders, or lives anywhere underneath one.
+fun String.isPathInUserExcludedFolder(context: Context): Boolean {
+    val config = context.config
+    if (!config.filterFoldersEnabled) {
+        return false
+    }
+
+    val excluded = config.excludedFolders
+    if (excluded.isEmpty()) {
+        return false
+    }
+
+    return excluded.any { folder ->
+        this == folder || this.startsWith("$folder/")
+    }
+}
+
+fun String.isPathInAnyExcludedFolder(context: Context): Boolean = isPathInExcludedFolder() || isPathInUserExcludedFolder(context)

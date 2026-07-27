@@ -2,12 +2,22 @@ package com.goodwy.filemanager.dialogs
 
 import android.content.pm.PackageManager
 import android.os.Process
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.goodwy.commons.dialogs.RadioGroupDialog
+import com.goodwy.commons.extensions.beVisibleIf
 import com.goodwy.commons.extensions.getAlertDialogBuilder
+import com.goodwy.commons.extensions.setupDialogStuff
 import com.goodwy.commons.extensions.toast
 import com.goodwy.commons.models.RadioItem
 import com.goodwy.filemanager.R
 import com.goodwy.filemanager.activities.SettingsActivity
+import com.goodwy.filemanager.databinding.DialogFilterOpenAppsBinding
+import com.goodwy.filemanager.databinding.ItemFilterOpenAppBinding
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.helpers.OpenAppCategory
 
@@ -34,6 +44,11 @@ private fun runLowPriorityInBackground(block: () -> Unit) {
 }
 
 // The actual (slow) enumeration: walks every installed package and loads each one's label.
+// 排除掉自己，以及没有启动图标的系统组件/资源覆盖包（比如各种 xxx.overlay、
+// com.mediatek.xxx 这类系统服务）——这些不是用户能有意去"打开文件"的真实应用，
+// 只会把候选列表搞得很长很乱。用"有没有启动器入口"（getLaunchIntentForPackage）
+// 来判断，比单纯按 FLAG_SYSTEM 过滤更准：像相机、图库这类预装系统应用照样有
+// 启动图标，会被保留；真正的系统组件/覆盖包没有启动图标，会被过滤掉。
 private fun SettingsActivity.enumerateInstalledApps(): List<Pair<String, String>> {
     val pm = packageManager
     return try {
@@ -41,6 +56,7 @@ private fun SettingsActivity.enumerateInstalledApps(): List<Pair<String, String>
             .asSequence()
             .map { it.packageName }
             .filter { it != packageName }
+            .filter { pm.getLaunchIntentForPackage(it) != null }
             .distinct()
             .mapNotNull { pkg ->
                 try {
@@ -180,27 +196,96 @@ private fun SettingsActivity.showManageOpenAppsFilterDialogInternal(allApps: Lis
         }
 
         val currentFilter = config.defaultOpenAppsFilter
-        val checkedItems = BooleanArray(allApps.size) { currentFilter.contains(allApps[it].first) }
-        val labels = allApps.map { it.second }.toTypedArray()
+        // 用包名（而不是列表下标）记录勾选状态，这样搜索筛选导致可见列表变短/重排
+        // 的时候，之前勾的项不会跟着位置错位或者丢失。
+        val checkedPackages = HashSet(currentFilter)
+
+        val binding = DialogFilterOpenAppsBinding.inflate(layoutInflater)
+        val listAdapter = FilterOpenAppsAdapter(allApps, checkedPackages)
+        binding.filterOpenAppsList.layoutManager = LinearLayoutManager(this)
+        binding.filterOpenAppsList.adapter = listAdapter
+
+        binding.filterOpenAppsSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString().orEmpty()
+                val isEmpty = listAdapter.filter(query)
+                binding.filterOpenAppsPlaceholder.beVisibleIf(isEmpty)
+                binding.filterOpenAppsList.beVisibleIf(!isEmpty)
+            }
+        })
 
         getAlertDialogBuilder()
-            .setTitle(R.string.filter_open_apps)
-            .setMultiChoiceItems(labels, checkedItems) { _, which, isChecked ->
-                checkedItems[which] = isChecked
-            }
-            .setPositiveButton(com.goodwy.commons.R.string.ok) { _, _ ->
-                val newFilter = allApps.filterIndexed { index, _ -> checkedItems[index] }
-                    .map { it.first }
-                    .toHashSet()
-                config.defaultOpenAppsFilter = newFilter
-            }
+            .setPositiveButton(com.goodwy.commons.R.string.ok, null)
             .setNegativeButton(com.goodwy.commons.R.string.cancel, null)
-            .setNeutralButton(R.string.refresh) { _, _ ->
-                toast(com.goodwy.commons.R.string.loading)
-                runLowPriorityInBackground {
-                    showManageOpenAppsFilterDialogInternal(refreshInstalledApps())
+            .setNeutralButton(R.string.refresh, null)
+            .apply {
+                setupDialogStuff(binding.root, this, R.string.filter_open_apps) { alertDialog ->
+                    alertDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        config.defaultOpenAppsFilter = checkedPackages
+                        alertDialog.dismiss()
+                    }
+
+                    alertDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                        toast(com.goodwy.commons.R.string.loading)
+                        alertDialog.dismiss()
+                        runLowPriorityInBackground {
+                            showManageOpenAppsFilterDialogInternal(refreshInstalledApps())
+                        }
+                    }
                 }
             }
-            .show()
+    }
+}
+
+private class FilterOpenAppsAdapter(
+    private val allApps: List<Pair<String, String>>,
+    private val checkedPackages: MutableSet<String>
+) : RecyclerView.Adapter<FilterOpenAppsAdapter.ViewHolder>() {
+
+    private var visibleApps: List<Pair<String, String>> = allApps
+
+    /** 按搜索词（大小写不敏感、匹配应用名或包名）重新过滤列表，返回过滤结果是否为空。 */
+    fun filter(query: String): Boolean {
+        val trimmed = query.trim()
+        visibleApps = if (trimmed.isEmpty()) {
+            allApps
+        } else {
+            allApps.filter {
+                it.second.contains(trimmed, ignoreCase = true) || it.first.contains(trimmed, ignoreCase = true)
+            }
+        }
+        notifyDataSetChanged()
+        return visibleApps.isEmpty()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val binding = ItemFilterOpenAppBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ViewHolder(binding)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(visibleApps[position])
+    }
+
+    override fun getItemCount() = visibleApps.size
+
+    inner class ViewHolder(private val binding: ItemFilterOpenAppBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(app: Pair<String, String>) {
+            val (pkg, label) = app
+            binding.filterOpenAppItemLabel.text = label
+            binding.filterOpenAppItemCheckbox.isChecked = checkedPackages.contains(pkg)
+
+            binding.filterOpenAppHolder.setOnClickListener {
+                val newValue = !checkedPackages.contains(pkg)
+                if (newValue) {
+                    checkedPackages.add(pkg)
+                } else {
+                    checkedPackages.remove(pkg)
+                }
+                binding.filterOpenAppItemCheckbox.isChecked = newValue
+            }
+        }
     }
 }

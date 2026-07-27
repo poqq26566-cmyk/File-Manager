@@ -119,6 +119,14 @@ class RecentsFragment(context: Context, attributeSet: AttributeSet) : MyViewPage
 
         binding.recentsSwipeRefresh.isEnabled = lastSearchedText.isEmpty() && activity?.config?.enablePullToRefresh != false
 
+        // MediaStore isn't watched live, so a file that appears while this screen isn't visible
+        // (e.g. downloaded from another app) would otherwise keep showing the stale list from the
+        // last query until the user pulls to refresh manually. Re-query every time the fragment
+        // becomes visible again instead.
+        if (lastSearchedText.isEmpty()) {
+            refreshFragment()
+        }
+
         binding.recentsList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)

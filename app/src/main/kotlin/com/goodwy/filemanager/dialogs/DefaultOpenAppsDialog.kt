@@ -274,8 +274,8 @@ private class FilterOpenAppsAdapter(
     inner class ViewHolder(private val binding: ItemFilterOpenAppBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(app: Pair<String, String>) {
             val (pkg, label) = app
-            binding.filterOpenAppItemLabel.text = label
-            binding.filterOpenAppItemCheckbox.isChecked = checkedPackages.contains(pkg)
+            binding.filterOpenAppLabel.text = label
+            binding.filterOpenAppCheckbox.isChecked = checkedPackages.contains(pkg)
 
             binding.filterOpenAppHolder.setOnClickListener {
                 val newValue = !checkedPackages.contains(pkg)
@@ -284,7 +284,7 @@ private class FilterOpenAppsAdapter(
                 } else {
                     checkedPackages.remove(pkg)
                 }
-                binding.filterOpenAppItemCheckbox.isChecked = newValue
+                binding.filterOpenAppCheckbox.isChecked = newValue
             }
         }
     }

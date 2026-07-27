@@ -22,7 +22,6 @@ import com.goodwy.filemanager.databinding.ItemsFragmentBinding
 import com.goodwy.filemanager.dialogs.CreateNewItemDialog
 import com.goodwy.filemanager.extensions.config
 import com.goodwy.filemanager.extensions.isPathOnRoot
-import com.goodwy.filemanager.helpers.DevFileAutoTrash
 import com.goodwy.filemanager.helpers.MAX_COLUMN_COUNT
 import com.goodwy.filemanager.helpers.RootHelpers
 import com.goodwy.filemanager.interfaces.ItemOperationsListener
@@ -167,10 +166,6 @@ class ItemsFragment(context: Context, attributeSet: AttributeSet) : MyViewPagerF
             }
 
             storedItems = items
-            DevFileAutoTrash.onFilesDetected(
-                context!!,
-                items.filter { !it.isDirectory && !it.isSectionTitle && !it.isGridTypeDivider }.map { it.mPath }
-            )
             if (binding.itemsList.adapter == null) {
                 binding.breadcrumbs.updateFontSize(context!!.getTextSize(), true)
             }

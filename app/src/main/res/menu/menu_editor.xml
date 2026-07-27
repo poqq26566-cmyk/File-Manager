@@ -19,6 +19,11 @@
         android:title="@string/save_as"
         app:showAsAction="never" />
     <item
+        android:id="@+id/menu_copy"
+        android:showAsAction="never"
+        android:title="@string/menu_copy_text"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/menu_print"
         android:icon="@drawable/ic_print_vector"
         android:title="@string/print"

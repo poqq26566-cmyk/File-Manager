@@ -39,7 +39,7 @@ import com.goodwy.filemanager.adapters.ItemsAdapter
 import com.goodwy.filemanager.databinding.ItemStorageVolumeBinding
 import com.goodwy.filemanager.databinding.StorageFragmentBinding
 import com.goodwy.filemanager.extensions.config
-import com.goodwy.filemanager.extensions.isPathInExcludedFolder
+import com.goodwy.filemanager.extensions.isPathInAnyExcludedFolder
 import com.goodwy.filemanager.extensions.formatSizeThousand
 import com.goodwy.filemanager.extensions.getAllVolumeNames
 import com.goodwy.filemanager.helpers.*
@@ -547,7 +547,7 @@ class StorageFragment(
                     // Same exclusion the browsable lists apply, so encrypted-volume contents don't
                     // inflate the counts here while being absent when the user taps into a category.
                     val rowPath = cursor.getStringValue(MediaStore.Files.FileColumns.DATA)
-                    if (rowPath != null && rowPath.isPathInExcludedFolder()) {
+                    if (rowPath != null && rowPath.isPathInAnyExcludedFolder(context!!)) {
                         return@queryCursor
                     }
 

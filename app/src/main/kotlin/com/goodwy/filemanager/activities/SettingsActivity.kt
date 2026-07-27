@@ -88,6 +88,7 @@ class SettingsActivity : SimpleActivity() {
         setupManageFavorites()
         setupPressBackTwice()
         setupFontSize()
+        updateExcludedFoldersCount()
         setupChangeDateTimeFormat()
         setupUseEnglish()
         setupLanguage()
@@ -112,6 +113,7 @@ class SettingsActivity : SimpleActivity() {
         setupHiddenItemPasswordProtection()
         setupAppPasswordProtection()
         setupFileDeletionPasswordProtection()
+        setupFilterFolders()
         setupEnableRootAccess()
 
         setupOverflowIcon()
@@ -631,6 +633,24 @@ class SettingsActivity : SimpleActivity() {
         snackbar.setTextColor(getProperTextColor())
         snackbar.setActionTextColor(getProperPrimaryColor())
         snackbar.show()
+    }
+
+    private fun setupFilterFolders() {
+        binding.apply {
+            settingsFilterFolders.isChecked = config.filterFoldersEnabled
+            settingsFilterFoldersHolder.setOnClickListener {
+                settingsFilterFolders.toggle()
+                config.filterFoldersEnabled = settingsFilterFolders.isChecked
+            }
+
+            settingsManageExcludedFoldersHolder.setOnClickListener {
+                startActivity(Intent(this@SettingsActivity, ManageExcludedFoldersActivity::class.java))
+            }
+        }
+    }
+
+    private fun updateExcludedFoldersCount() {
+        binding.settingsManageExcludedFoldersCount.text = config.excludedFolders.size.toString()
     }
 
     private fun setupHiddenItemPasswordProtection() {

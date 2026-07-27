@@ -209,6 +209,7 @@ class ReadTextActivity : SimpleActivity() {
                 R.id.menu_search -> openSearch()
                 R.id.menu_save -> saveText()
                 R.id.menu_save_as -> saveAsText()
+                R.id.menu_copy -> copyTextToClipboard()
                 R.id.menu_open_with -> openPath(intent.dataString!!, true)
                 R.id.menu_print -> printText()
                 else -> return@setOnMenuItemClickListener false
@@ -302,6 +303,10 @@ class ReadTextActivity : SimpleActivity() {
         } else {
             toast(R.string.unknown_error_occurred)
         }
+    }
+
+    private fun copyTextToClipboard() {
+        copyToClipboard(binding.readTextView.text.toString())
     }
 
     private fun printText() {

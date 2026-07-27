@@ -66,6 +66,29 @@ class Config(context: Context) : BaseConfig(context) {
         prefs.edit().putString("trash_metadata", json).apply()
     }
 
+    // "过滤文件夹" (Settings > Security): when enabled, any folder the user has added to
+    // excludedFolders is skipped everywhere file lists and storage-category counts are built,
+    // the same way the hardcoded "vault" folder already is (see String.kt).
+    var filterFoldersEnabled: Boolean
+        get() = prefs.getBoolean(FILTER_FOLDERS_ENABLED, true)
+        set(filterFoldersEnabled) = prefs.edit().putBoolean(FILTER_FOLDERS_ENABLED, filterFoldersEnabled).apply()
+
+    var excludedFolders: MutableSet<String>
+        get() = prefs.getStringSet(EXCLUDED_FOLDERS, HashSet()) ?: HashSet()
+        set(excludedFolders) = prefs.edit().putStringSet(EXCLUDED_FOLDERS, excludedFolders).apply()
+
+    fun addExcludedFolder(path: String) {
+        val current = HashSet<String>(excludedFolders)
+        current.add(path.trimEnd('/'))
+        excludedFolders = current
+    }
+
+    fun removeExcludedFolder(path: String) {
+        val current = HashSet<String>(excludedFolders)
+        current.remove(path)
+        excludedFolders = current
+    }
+
     fun addFavorite(path: String) {
         val currFavorites = HashSet<String>(favorites)
         currFavorites.add(path)

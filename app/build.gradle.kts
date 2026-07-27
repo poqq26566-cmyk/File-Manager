@@ -152,7 +152,6 @@ detekt {
 dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.swiperefreshlayout)
-    implementation(libs.androidx.work.runtime)
     implementation(libs.roottools)
     implementation(libs.rootshell)
     implementation(libs.gestureviews)

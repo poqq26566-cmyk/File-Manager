@@ -25,7 +25,7 @@ import com.goodwy.filemanager.databinding.ActivityMimetypesBinding
 import com.goodwy.filemanager.dialogs.ChangeSortingDialog
 import com.goodwy.filemanager.dialogs.ChangeViewTypeDialog
 import com.goodwy.filemanager.extensions.config
-import com.goodwy.filemanager.extensions.isPathInExcludedFolder
+import com.goodwy.filemanager.extensions.isPathInAnyExcludedFolder
 import com.goodwy.filemanager.extensions.isPathInHiddenFolder
 import com.goodwy.filemanager.extensions.tryOpenPathIntent
 import com.goodwy.filemanager.helpers.*
@@ -530,7 +530,7 @@ class MimeTypesActivity : SimpleActivity(), ItemOperationsListener {
 
                         // Skipped regardless of the show-hidden setting: these aren't hidden files,
                         // they're encrypted-volume internals that are never meaningful to browse.
-                        if (path.isPathInExcludedFolder()) {
+                        if (path.isPathInAnyExcludedFolder(this)) {
                             continue
                         }
 

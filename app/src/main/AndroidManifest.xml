@@ -204,6 +204,13 @@
             android:parentActivityName=".activities.SettingsActivity" />
 
         <activity
+            android:name=".activities.ManageMonitoredFoldersActivity"
+            android:configChanges="orientation"
+            android:exported="false"
+            android:label="@string/manage_monitored_folders"
+            android:parentActivityName=".activities.SettingsActivity" />
+
+        <activity
             android:name=".activities.TrashActivity"
             android:configChanges="orientation"
             android:exported="false"

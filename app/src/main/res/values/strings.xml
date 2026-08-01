@@ -108,4 +108,7 @@
     <string name="battery_whitelist">Ignore battery optimizations for this app</string>
     <string name="autostart_whitelist">Allow autostart (manufacturer settings)</string>
     <string name="autostart_not_found">Couldn\'t find an autostart settings page for this device. Please enable it manually from your phone\'s app settings.</string>
+    <string name="manage_monitored_folders">Monitored folders</string>
+    <string name="add_monitored_folder">Add folder</string>
+    <string name="monitored_folders_placeholder">No folders yet. New files that finish downloading/copying into a folder added here get auto-sorted into Images/Documents/Videos/Audio/Archives subfolders.</string>
 </resources>

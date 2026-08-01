@@ -733,6 +733,33 @@
                     </RelativeLayout>
 
                     <RelativeLayout
+                        android:id="@+id/settings_manage_monitored_folders_holder"
+                        style="@style/SettingsHolderStyle">
+
+                        <com.goodwy.commons.views.MyTextView
+                            android:id="@+id/settings_manage_monitored_folders_label"
+                            style="@style/SettingsTextLabelStyle"
+                            android:layout_centerVertical="true"
+                            android:layout_alignParentStart="true"
+                            android:layout_toStartOf="@+id/settings_manage_monitored_folders_count"
+                            android:layout_marginEnd="@dimen/larger_margin"
+                            android:text="@string/manage_monitored_folders" />
+
+                        <com.goodwy.commons.views.MyTextView
+                            android:id="@+id/settings_manage_monitored_folders_count"
+                            style="@style/SettingsTextValueStyle"
+                            android:layout_centerVertical="true"
+                            android:layout_toStartOf="@+id/settings_manage_monitored_folders_chevron"
+                            tools:text="1" />
+
+                        <ImageView
+                            android:id="@+id/settings_manage_monitored_folders_chevron"
+                            style="@style/SettingsChevronStyle"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true" />
+                    </RelativeLayout>
+
+                    <RelativeLayout
                         android:id="@+id/settings_battery_whitelist_holder"
                         style="@style/SettingsHolderStyle">
 

@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -12,16 +13,19 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
-import com.goodwy.commons.extensions.getInternalStoragePath
+import androidx.core.content.ContextCompat
 import com.goodwy.filemanager.R
+import com.goodwy.filemanager.extensions.config
 import java.io.File
 
 /**
- * Foreground service that watches the Download folder with FileObserver and moves finished
- * downloads straight into type subfolders (Images / Documents / Videos / Audio / Archives /
- * Others) — no polling, no WorkManager delay, it reacts as soon as a file finishes writing.
+ * Foreground service that watches every folder in config.monitoredFolders with FileObserver and
+ * moves finished downloads/copies straight into type subfolders (Images / Documents / Videos /
+ * Audio / Archives / Apps) — no polling, no WorkManager delay, it reacts as soon as a file
+ * finishes writing.
  *
  * Toggle: Settings > File operations > "Monitor Download folder and auto-organize new files".
+ * Watched folders: Settings > File operations > "Monitored folders" (defaults to just Download).
  * Restarted after reboot by BootReceiver if the toggle was left on.
  */
 class FileMonitorService : Service() {
@@ -47,9 +51,18 @@ class FileMonitorService : Service() {
             "zip" to "Archives", "rar" to "Archives", "7z" to "Archives", "tar" to "Archives", "gz" to "Archives",
             "apk" to "Apps"
         )
+
+        // The list of watched folders is only read once, in onCreate(). Call this after adding
+        // or removing a monitored folder while the service is already running, so the change
+        // takes effect immediately instead of on the next app/service restart.
+        fun restartIfRunning(context: Context) {
+            val appContext = context.applicationContext
+            appContext.stopService(Intent(appContext, FileMonitorService::class.java))
+            ContextCompat.startForegroundService(appContext, Intent(appContext, FileMonitorService::class.java))
+        }
     }
 
-    private var observer: FileObserver? = null
+    private val observers = mutableListOf<FileObserver>()
     private val debounceHandler = Handler(Looper.getMainLooper())
     private val pendingMoves = HashMap<String, Runnable>()
 
@@ -74,39 +87,46 @@ class FileMonitorService : Service() {
     }
 
     override fun onDestroy() {
-        observer?.stopWatching()
-        observer = null
+        observers.forEach { it.stopWatching() }
+        observers.clear()
         debounceHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 
-    private fun downloadDir(): File = File(getInternalStoragePath(), "Download")
-
     private fun startWatching() {
-        val dir = downloadDir()
-        if (!dir.isDirectory) {
+        // If nothing is configured (or every configured folder has since been deleted), there's
+        // nothing useful to do — stop rather than sit around as a resident no-op service.
+        val dirs = config.monitoredFolders.map { File(it) }.filter { it.isDirectory }
+        if (dirs.isEmpty()) {
+            stopSelf()
             return
         }
 
-        @Suppress("DEPRECATION")
-        observer = object : FileObserver(dir.path, WATCH_MASK) {
+        dirs.forEach { dir -> observers.add(watchDir(dir)) }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun watchDir(dir: File): FileObserver {
+        val observer = object : FileObserver(dir.path, WATCH_MASK) {
             override fun onEvent(event: Int, path: String?) {
                 if (path.isNullOrEmpty()) {
                     return
                 }
+                val key = "${dir.path}/$path"
                 // Debounce: CLOSE_WRITE can fire more than once for the same file (e.g. once
                 // per buffered flush from some download managers).
-                pendingMoves[path]?.let { debounceHandler.removeCallbacks(it) }
+                pendingMoves[key]?.let { debounceHandler.removeCallbacks(it) }
                 val runnable = Runnable { organizeFile(File(dir, path)) }
-                pendingMoves[path] = runnable
+                pendingMoves[key] = runnable
                 debounceHandler.postDelayed(runnable, DEBOUNCE_MS)
             }
         }
-        observer?.startWatching()
+        observer.startWatching()
+        return observer
     }
 
     private fun organizeFile(file: File) {
-        pendingMoves.remove(file.name)
+        pendingMoves.remove("${file.parent}/${file.name}")
         if (!file.isFile) {
             return
         }

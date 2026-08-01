@@ -14,6 +14,18 @@ class Config(context: Context) : BaseConfig(context) {
         private const val ENTRY_SEPARATOR = "\u0001"
     }
 
+    // One-shot flag: has the first-run default sort order (see SplashActivity) already
+    // been applied? Prevents it from overwriting the user's own sort choice on later launches.
+    var hasSetInitialSortOrder: Boolean
+        get() = prefs.getBoolean(HAS_SET_INITIAL_SORT_ORDER, false)
+        set(value) = prefs.edit().putBoolean(HAS_SET_INITIAL_SORT_ORDER, value).apply()
+
+    // Settings > File operations > "Monitor Download folder and auto-organize new files".
+    // Also read by BootReceiver to decide whether to restart FileMonitorService after reboot.
+    var fileMonitorEnabled: Boolean
+        get() = prefs.getBoolean(FILE_MONITOR_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(FILE_MONITOR_ENABLED, value).apply()
+
     var showHidden: Boolean
         get() = prefs.getBoolean(SHOW_HIDDEN, false)
         set(show) = prefs.edit().putBoolean(SHOW_HIDDEN, show).apply()

@@ -89,6 +89,7 @@ class SettingsActivity : SimpleActivity() {
         setupPressBackTwice()
         setupFontSize()
         updateExcludedFoldersCount()
+        updateMonitoredFoldersCount()
         setupChangeDateTimeFormat()
         setupUseEnglish()
         setupLanguage()
@@ -656,6 +657,10 @@ class SettingsActivity : SimpleActivity() {
         binding.settingsManageExcludedFoldersCount.text = config.excludedFolders.size.toString()
     }
 
+    private fun updateMonitoredFoldersCount() {
+        binding.settingsManageMonitoredFoldersCount.text = config.monitoredFolders.size.toString()
+    }
+
     private fun setupHiddenItemPasswordProtection() {
         binding.apply {
             settingsPasswordProtection.isChecked = config.isHiddenPasswordProtectionOn
@@ -752,6 +757,10 @@ class SettingsActivity : SimpleActivity() {
                 } else {
                     stopService(serviceIntent)
                 }
+            }
+
+            settingsManageMonitoredFoldersHolder.setOnClickListener {
+                startActivity(Intent(this@SettingsActivity, com.goodwy.filemanager.activities.ManageMonitoredFoldersActivity::class.java))
             }
         }
     }

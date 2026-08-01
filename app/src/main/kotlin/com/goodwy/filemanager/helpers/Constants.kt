@@ -29,6 +29,8 @@ const val OPEN_CATEGORY_PPT = "ppt"
 
 // shared preferences
 const val SHOW_HIDDEN = "show_hidden"
+const val HAS_SET_INITIAL_SORT_ORDER = "has_set_initial_sort_order"
+const val FILE_MONITOR_ENABLED = "file_monitor_enabled"
 const val PRESS_BACK_TWICE = "press_back_twice"
 const val HOME_FOLDER = "home_folder"
 const val TEMPORARILY_SHOW_HIDDEN = "temporarily_show_hidden"

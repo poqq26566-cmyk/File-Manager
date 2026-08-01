@@ -100,4 +100,12 @@
     <string name="category_word">Word documents</string>
     <string name="category_excel">Excel spreadsheets</string>
     <string name="category_ppt">PowerPoint presentations</string>
+
+    <!-- File monitor / whitelist -->
+    <string name="file_monitor_auto_organize">Monitor Download folder and auto-organize new files</string>
+    <string name="file_monitor_notification_channel">File monitor</string>
+    <string name="file_monitor_notification_title">Watching Download folder</string>
+    <string name="battery_whitelist">Ignore battery optimizations for this app</string>
+    <string name="autostart_whitelist">Allow autostart (manufacturer settings)</string>
+    <string name="autostart_not_found">Couldn\'t find an autostart settings page for this device. Please enable it manually from your phone\'s app settings.</string>
 </resources>

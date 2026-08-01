@@ -26,6 +26,30 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(FILE_MONITOR_ENABLED, false)
         set(value) = prefs.edit().putBoolean(FILE_MONITOR_ENABLED, value).apply()
 
+    // Folders FileMonitorService watches. Defaults to just Download until the user has ever
+    // touched this setting (prefs not containing the key at all is what signals "never
+    // customized" — distinct from the user deliberately clearing every folder to an empty set).
+    var monitoredFolders: MutableSet<String>
+        get() {
+            if (!prefs.contains(MONITORED_FOLDERS)) {
+                return hashSetOf(File(getInternalStoragePath(), "Download").path)
+            }
+            return prefs.getStringSet(MONITORED_FOLDERS, HashSet()) ?: HashSet()
+        }
+        set(value) = prefs.edit().putStringSet(MONITORED_FOLDERS, value).apply()
+
+    fun addMonitoredFolder(path: String) {
+        val current = HashSet<String>(monitoredFolders)
+        current.add(path.trimEnd('/'))
+        monitoredFolders = current
+    }
+
+    fun removeMonitoredFolder(path: String) {
+        val current = HashSet<String>(monitoredFolders)
+        current.remove(path)
+        monitoredFolders = current
+    }
+
     var showHidden: Boolean
         get() = prefs.getBoolean(SHOW_HIDDEN, false)
         set(show) = prefs.edit().putBoolean(SHOW_HIDDEN, show).apply()

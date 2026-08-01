@@ -16,6 +16,7 @@ import android.widget.*
 import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.updatePadding
+import androidx.recyclerview.widget.AdapterListUpdateCallback
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -85,6 +86,11 @@ class ItemsAdapter(
     private var dateFormat = ""
     private var timeFormat = ""
 
+    // Ported from Material Files (质感文件) FileListAdapter: same DiffUtil.ItemCallback shape
+    // (areItemsTheSame by path, areContentsTheSame by full data-class equality) driving the
+    // same ListDiffer, wired to notify this adapter through AdapterListUpdateCallback.
+    private val listDiffer = ListDiffer(AdapterListUpdateCallback(this), CALLBACK)
+
     private val config = activity.config
     private val viewType = if (usePath != null) {
         config.getFolderViewType(
@@ -105,6 +111,22 @@ class ItemsAdapter(
         private const val TYPE_DIR = 2
         private const val TYPE_SECTION = 3
         private const val TYPE_GRID_TYPE_DIVIDER = 4
+
+        // Same shape as Material Files' FileListAdapter.CALLBACK:
+        //   areItemsTheSame -> oldItem.path == newItem.path
+        //   areContentsTheSame -> oldItem == newItem
+        // extended with isSectionTitle/isGridTypeDivider since this list (unlike
+        // Material Files') mixes real files with synthetic header/divider rows that
+        // can share the same path.
+        private val CALLBACK = object : DiffUtil.ItemCallback<ListItem>() {
+            override fun areItemsTheSame(oldItem: ListItem, newItem: ListItem): Boolean =
+                oldItem.mPath == newItem.mPath &&
+                    oldItem.isSectionTitle == newItem.isSectionTitle &&
+                    oldItem.isGridTypeDivider == newItem.isGridTypeDivider
+
+            override fun areContentsTheSame(oldItem: ListItem, newItem: ListItem): Boolean =
+                oldItem == newItem
+        }
     }
 
     init {
@@ -932,46 +954,17 @@ class ItemsAdapter(
         if (newItems.hashCode() != currentItemsHash) {
             currentItemsHash = newItems.hashCode()
             textToHighlight = highlightText
-            val oldItems = listItems
             val newList = newItems.clone() as ArrayList<ListItem>
-            // Diffing is O(N*D) and can be slow for folders with thousands of files,
-            // so it runs off the main thread; only the (cheap) dispatch touches the UI.
-            ensureBackgroundThread {
-                val diffResult = DiffUtil.calculateDiff(ItemsDiffCallback(oldItems, newList), true)
-                activity.runOnUiThread {
-                    listItems = newList
-                    diffResult.dispatchUpdatesTo(this)
-                    finishActMode()
-                }
-            }
+            listItems = newList
+            // Exactly how Material Files (质感文件) does it: ListDiffer.list setter runs
+            // DiffUtil synchronously and dispatches only the rows that actually changed,
+            // instead of notifyDataSetChanged() rebinding (and re-loading thumbnails for)
+            // every visible row.
+            listDiffer.list = newList
+            finishActMode()
         } else if (textToHighlight != highlightText) {
             textToHighlight = highlightText
             notifyDataSetChanged()
-        }
-    }
-
-    /**
-     * Instead of tearing down and re-binding every visible row (which re-triggers a
-     * Glide thumbnail load for each one and causes the jank you see while scrolling
-     * right after a folder loads), this only rebinds the rows that actually changed —
-     * the same approach apps like Material Files (质感文件) use for their file lists.
-     */
-    private class ItemsDiffCallback(
-        private val oldList: List<ListItem>,
-        private val newList: List<ListItem>
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize() = oldList.size
-        override fun getNewListSize() = newList.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val old = oldList[oldItemPosition]
-            val new = newList[newItemPosition]
-            return old.mPath == new.mPath && old.isSectionTitle == new.isSectionTitle && old.isGridTypeDivider == new.isGridTypeDivider
-        }
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            // ListItem is a data class, so this compares every field (size, modified date, etc.)
-            return oldList[oldItemPosition] == newList[newItemPosition]
         }
     }
 

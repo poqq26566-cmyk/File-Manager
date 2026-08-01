@@ -720,6 +720,41 @@
                             android:text="@string/skip_delete_confirmation"
                             app:switchPadding="@dimen/bigger_margin" />
                     </RelativeLayout>
+
+                    <RelativeLayout
+                        android:id="@+id/settings_file_monitor_holder"
+                        style="@style/SettingsHolderSwitchStyle">
+
+                        <com.goodwy.commons.views.MyMaterialSwitch
+                            android:id="@+id/settings_file_monitor"
+                            style="@style/SettingsSwitchStyle"
+                            android:text="@string/file_monitor_auto_organize"
+                            app:switchPadding="@dimen/bigger_margin" />
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:id="@+id/settings_battery_whitelist_holder"
+                        style="@style/SettingsHolderStyle">
+
+                        <com.goodwy.commons.views.MyTextView
+                            android:id="@+id/settings_battery_whitelist_label"
+                            style="@style/SettingsTextLabelStyle"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:text="@string/battery_whitelist" />
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:id="@+id/settings_autostart_holder"
+                        style="@style/SettingsHolderStyle">
+
+                        <com.goodwy.commons.views.MyTextView
+                            android:id="@+id/settings_autostart_label"
+                            style="@style/SettingsTextLabelStyle"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:text="@string/autostart_whitelist" />
+                    </RelativeLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

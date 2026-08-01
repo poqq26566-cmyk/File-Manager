@@ -109,6 +109,9 @@ class SettingsActivity : SimpleActivity() {
         setupShowHidden()
         setupKeepLastModified()
         setupDeleteConfirmation()
+        setupFileMonitor()
+        setupBatteryWhitelist()
+        setupAutoStartWhitelist()
 
         setupHiddenItemPasswordProtection()
         setupAppPasswordProtection()
@@ -732,6 +735,36 @@ class SettingsActivity : SimpleActivity() {
                 settingsKeepLastModified.toggle()
                 config.keepLastModified = settingsKeepLastModified.isChecked
             }
+        }
+    }
+
+    private fun setupFileMonitor() {
+        binding.apply {
+            settingsFileMonitor.isChecked = config.fileMonitorEnabled
+            settingsFileMonitorHolder.setOnClickListener {
+                settingsFileMonitor.toggle()
+                val enabled = settingsFileMonitor.isChecked
+                config.fileMonitorEnabled = enabled
+
+                val serviceIntent = Intent(this@SettingsActivity, com.goodwy.filemanager.services.FileMonitorService::class.java)
+                if (enabled) {
+                    androidx.core.content.ContextCompat.startForegroundService(this@SettingsActivity, serviceIntent)
+                } else {
+                    stopService(serviceIntent)
+                }
+            }
+        }
+    }
+
+    private fun setupBatteryWhitelist() {
+        binding.settingsBatteryWhitelistHolder.setOnClickListener {
+            BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(this)
+        }
+    }
+
+    private fun setupAutoStartWhitelist() {
+        binding.settingsAutostartHolder.setOnClickListener {
+            BatteryOptimizationHelper.openAutoStartSettings(this)
         }
     }
 

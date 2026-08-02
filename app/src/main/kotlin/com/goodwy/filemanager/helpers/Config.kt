@@ -156,6 +156,16 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(IS_ROOT_AVAILABLE, false)
         set(isRootAvailable) = prefs.edit().putBoolean(IS_ROOT_AVAILABLE, isRootAvailable).apply()
 
+    // Timestamp of the last time we probed for root / validated favorites. Both checks touch the
+    // filesystem and don't need to run on literally every cold launch, only occasionally.
+    var lastRootCheckTS: Long
+        get() = prefs.getLong(LAST_ROOT_CHECK_TS, 0L)
+        set(lastRootCheckTS) = prefs.edit().putLong(LAST_ROOT_CHECK_TS, lastRootCheckTS).apply()
+
+    var lastFavoritesCheckTS: Long
+        get() = prefs.getLong(LAST_FAVORITES_CHECK_TS, 0L)
+        set(lastFavoritesCheckTS) = prefs.edit().putLong(LAST_FAVORITES_CHECK_TS, lastFavoritesCheckTS).apply()
+
     var enableRootAccess: Boolean
         get() = prefs.getBoolean(ENABLE_ROOT_ACCESS, false)
         set(enableRootAccess) = prefs.edit().putBoolean(ENABLE_ROOT_ACCESS, enableRootAccess).apply()

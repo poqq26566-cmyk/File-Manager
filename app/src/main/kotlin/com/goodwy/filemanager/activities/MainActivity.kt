@@ -61,6 +61,8 @@ class MainActivity : SimpleActivity() {
         private const val BACK_PRESS_TIMEOUT = 5000
         private const val USAGE_STATS_RC = 202
         private const val PICKED_PATH = "picked_path"
+        private const val ROOT_CHECK_INTERVAL = 24 * 60 * 60 * 1000L // 1 day
+        private const val FAVORITES_CHECK_INTERVAL = 6 * 60 * 60 * 1000L // 6 hours
     }
 
     private val binding by viewBinding(ActivityMainBinding::inflate)
@@ -780,8 +782,24 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun checkIfRootAvailable() {
+        val now = System.currentTimeMillis()
+        // Probing for root touches the filesystem (scans several binary paths) and its result
+        // essentially never changes between launches, so only redo it once a day instead of on
+        // every single cold start.
+        if (now - config.lastRootCheckTS < ROOT_CHECK_INTERVAL && config.lastRootCheckTS != 0L) {
+            if (config.isRootAvailable && config.enableRootAccess) {
+                ensureBackgroundThread {
+                    RootHelpers(this).askRootIfNeeded {
+                        config.enableRootAccess = it
+                    }
+                }
+            }
+            return
+        }
+
         ensureBackgroundThread {
             config.isRootAvailable = RootTools.isRootAvailable()
+            config.lastRootCheckTS = now
             if (config.isRootAvailable && config.enableRootAccess) {
                 RootHelpers(this).askRootIfNeeded {
                     config.enableRootAccess = it
@@ -791,12 +809,20 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun checkInvalidFavorites() {
+        val now = System.currentTimeMillis()
+        // Same idea: validating every favorite path against the filesystem is cheap for a couple
+        // of items, but there's no need to redo it on every cold launch either.
+        if (now - config.lastFavoritesCheckTS < FAVORITES_CHECK_INTERVAL && config.lastFavoritesCheckTS != 0L) {
+            return
+        }
+
         ensureBackgroundThread {
             config.favorites.forEach {
                 if (!isPathOnOTG(it) && !isPathOnSD(it) && !File(it).exists()) {
                     config.removeFavorite(it)
                 }
             }
+            config.lastFavoritesCheckTS = now
         }
     }
 

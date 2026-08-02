@@ -20,7 +20,6 @@ import com.goodwy.filemanager.dialogs.getDefaultOpenAppLabel
 import com.goodwy.filemanager.dialogs.showAppPickerForCategory
 import com.goodwy.filemanager.dialogs.showManageOpenAppsFilterDialog
 import com.goodwy.filemanager.extensions.config
-import com.goodwy.filemanager.extensions.launchAbout
 import com.goodwy.filemanager.extensions.pixels
 import com.goodwy.filemanager.helpers.*
 import com.google.android.material.snackbar.Snackbar
@@ -130,8 +129,6 @@ class SettingsActivity : SimpleActivity() {
         setupThumbnailsSize()
         setupShowOnlyFilename()
 
-        setupTipJar()
-        setupAbout()
 
         updateTextColors(binding.settingsNestedScrollview)
 
@@ -144,8 +141,7 @@ class SettingsActivity : SimpleActivity() {
                 settingsFileOperationsLabel,
                 settingsSecurityLabel,
                 settingsTopAppBarLabel,
-                settingsListViewLabel,
-                settingsOtherLabel
+                settingsListViewLabel
             ).forEach {
                 it.setTextColor(getProperPrimaryColor())
             }
@@ -161,8 +157,7 @@ class SettingsActivity : SimpleActivity() {
                 settingsFileOperationsHolder,
                 settingsSecurityHolder,
                 settingsTopAppBarHolder,
-                settingsListViewHolder,
-                settingsOtherHolder
+                settingsListViewHolder
             ).forEach {
                 it.setCardBackgroundColor(getSurfaceColor())
             }
@@ -174,9 +169,7 @@ class SettingsActivity : SimpleActivity() {
                 settingsFilterOpenAppsChevron,
                 settingsManageShownTabsChevron,
                 settingsManageFavoritesChevron,
-                settingsChangeDateTimeFormatChevron,
-                settingsTipJarChevron,
-                settingsAboutChevron
+                settingsChangeDateTimeFormatChevron
             ).forEach {
                 it.applyColorFilter(getProperTextColor())
             }
@@ -187,7 +180,6 @@ class SettingsActivity : SimpleActivity() {
         binding.apply {
             settingsPurchaseThankYouHolder.beGoneIf(isPro)
             settingsSwipeLeftActionHolder.alpha = if (isPro) 1f else 0.4f
-            settingsTipJarHolder.beVisibleIf(isPro)
         }
     }
 
@@ -917,34 +909,6 @@ class SettingsActivity : SimpleActivity() {
                 config.changeColourTopBar = settingsChangeColourTopBar.isChecked
                 config.needRestart = true
             }
-        }
-    }
-
-    private fun setupTipJar() = binding.apply {
-        settingsTipJarHolder.apply {
-            beVisibleIf(isPro())
-            background.applyColorFilter(getColoredMaterialStatusBarColor().lightenColor(4))
-            setOnClickListener {
-                launchPurchase()
-            }
-        }
-    }
-
-    @SuppressLint("SetTextI18n")
-    private fun setupAbout() = binding.apply {
-        val flavorName = BuildConfig.FLAVOR
-        val storeDisplayName = when (flavorName) {
-            "gplay" -> "Google Play"
-            "foss" -> "FOSS"
-            "rustore" -> "RuStore"
-            else -> "Huawei"
-        }
-        val versionName = BuildConfig.VERSION_NAME
-        val fullVersionText = "Version: $versionName ($storeDisplayName)"
-
-        settingsAboutVersion.text = fullVersionText
-        settingsAboutHolder.setOnClickListener {
-            launchAbout()
         }
     }
 

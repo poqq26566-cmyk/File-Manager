@@ -31,6 +31,7 @@ import com.goodwy.filemanager.activities.SimpleActivity
 import com.goodwy.filemanager.adapters.ItemsAdapter
 import com.goodwy.filemanager.databinding.RecentsFragmentBinding
 import com.goodwy.filemanager.extensions.config
+import com.goodwy.filemanager.extensions.isPathInAnyExcludedFolder
 import com.goodwy.filemanager.extensions.isPathInHiddenFolder
 import com.goodwy.filemanager.helpers.MAX_COLUMN_COUNT
 import com.goodwy.filemanager.helpers.RECENTS_FRAGMENT_PATH
@@ -218,7 +219,8 @@ class RecentsFragment(context: Context, attributeSet: AttributeSet) : MyViewPage
                         val modified = cursor.getLongValue(FileColumns.DATE_MODIFIED) * 1000
                         val isHiddenFile = name.startsWith(".")
                         val shouldShow = showHidden || (!isHiddenFile && !path.isPathInHiddenFolder())
-                        if (shouldShow && activity?.getDoesFilePathExist(path) == true) {
+                        val isExcluded = context?.let { path.isPathInAnyExcludedFolder(it) } ?: false
+                        if (shouldShow && !isExcluded && activity?.getDoesFilePathExist(path) == true) {
                             if (wantedMimeTypes.any { isProperMimeType(it, path, false) }) {
                                 val fileDirItem = ListItem(path, name, false, 0, size, modified, false, false)
                                 listItems.add(fileDirItem)

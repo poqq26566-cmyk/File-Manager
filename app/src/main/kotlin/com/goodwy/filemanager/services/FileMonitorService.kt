@@ -32,7 +32,6 @@ class FileMonitorService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "file_monitor_channel"
-        private const val ERROR_CHANNEL_ID = "file_monitor_error_channel"
         private const val NOTIFICATION_ID = 7302
 
         // A freshly-created file fires CREATE immediately but may still be being written to
@@ -137,7 +136,6 @@ class FileMonitorService : Service() {
 
         val targetDir = File(file.parentFile, targetFolderName)
         if (!targetDir.exists() && !targetDir.mkdirs()) {
-            notifyOrganizeFailed(file.name, getString(R.string.file_monitor_error_target_dir))
             return
         }
 
@@ -153,42 +151,7 @@ class FileMonitorService : Service() {
             }
         }
 
-        // renameTo() is just the raw rename() syscall under the hood, which only works within
-        // a single filesystem/partition — it fails silently (returns false, no exception) for
-        // anything crossing a partition boundary, e.g. a monitored folder on an SD card whose
-        // target subfolder ends up elsewhere. Fall back to copy+delete, which works across
-        // partitions, before giving up and telling the user why nothing happened.
-        val moved = file.renameTo(targetFile) || copyThenDelete(file, targetFile)
-        if (!moved) {
-            notifyOrganizeFailed(file.name, getString(R.string.file_monitor_error_move_failed))
-        }
-    }
-
-    private fun copyThenDelete(source: File, target: File): Boolean {
-        return try {
-            source.copyTo(target, overwrite = false)
-            source.delete()
-            true
-        } catch (e: Exception) {
-            target.delete() // clean up a partial copy so it doesn't look like it half-succeeded
-            false
-        }
-    }
-
-    private fun notifyOrganizeFailed(fileName: String, reason: String) {
-        val notification = NotificationCompat.Builder(this, ERROR_CHANNEL_ID)
-            .setContentTitle(getString(R.string.file_monitor_error_title, fileName))
-            .setContentText(reason)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
-            .setSmallIcon(R.drawable.ic_storage_vector)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-        val manager = getSystemService(NotificationManager::class.java)
-        // Distinct ID per filename so failures for different files don't overwrite each other,
-        // but the same file failing twice in a row just updates one notification instead of
-        // spamming the tray.
-        manager.notify(NOTIFICATION_ID + fileName.hashCode(), notification)
+        file.renameTo(targetFile)
     }
 
     private fun createNotificationChannelIfNeeded() {
@@ -203,14 +166,6 @@ class FileMonitorService : Service() {
                     setShowBadge(false)
                 }
                 manager.createNotificationChannel(channel)
-            }
-            if (manager.getNotificationChannel(ERROR_CHANNEL_ID) == null) {
-                val errorChannel = NotificationChannel(
-                    ERROR_CHANNEL_ID,
-                    getString(R.string.file_monitor_error_channel),
-                    NotificationManager.IMPORTANCE_DEFAULT
-                )
-                manager.createNotificationChannel(errorChannel)
             }
         }
     }

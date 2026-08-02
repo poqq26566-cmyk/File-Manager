@@ -104,7 +104,11 @@
     <!-- File monitor / whitelist -->
     <string name="file_monitor_auto_organize">Monitor Download folder and auto-organize new files</string>
     <string name="file_monitor_notification_channel">File monitor</string>
+    <string name="file_monitor_error_channel">File monitor errors</string>
     <string name="file_monitor_notification_title">Watching Download folder</string>
+    <string name="file_monitor_error_title">Couldn\'t organize \"%1$s\"</string>
+    <string name="file_monitor_error_target_dir">Couldn\'t create the destination folder. Check that there\'s free space and the folder isn\'t read-only.</string>
+    <string name="file_monitor_error_move_failed">The file couldn\'t be moved, even after trying to copy it instead. It was left where it was.</string>
     <string name="battery_whitelist">Ignore battery optimizations for this app</string>
     <string name="autostart_whitelist">Allow autostart (manufacturer settings)</string>
     <string name="autostart_not_found">Couldn\'t find an autostart settings page for this device. Please enable it manually from your phone\'s app settings.</string>

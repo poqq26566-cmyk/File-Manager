@@ -90,6 +90,15 @@ class ItemsFragment(context: Context, attributeSet: AttributeSet) : MyViewPagerF
             itemsSwipeRefresh.isEnabled = lastSearchedText.isEmpty() && activity?.config?.enablePullToRefresh != false
         }
 
+        // Same fix as RecentsFragment: the file list is only read once when a folder is opened,
+        // so a file that appears while this screen isn't visible (downloaded from a browser,
+        // saved by another app, moved in by FileMonitorService, etc.) would otherwise keep
+        // showing the stale list until the user pulls to refresh manually. Re-list the current
+        // folder every time this screen becomes visible again instead.
+        if (lastSearchedText.isEmpty() && currentPath != "") {
+            refreshFragment()
+        }
+
         binding.itemsList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
